@@ -1,4 +1,5 @@
 import os
+from django.urls import reverse
 from pathlib import Path
 from django.http import FileResponse
 from rest_framework import generics, permissions, status
@@ -13,7 +14,9 @@ from .watermark import WaveletDCTWatermark
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from rest_framework.views import APIView
-
+import pyqrcode 
+import png 
+from pyqrcode import QRCode 
 
 class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
@@ -77,6 +80,11 @@ class ImageUploadView(generics.CreateAPIView):
                 try:
                     # Setup paths for watermarking
                     media_root = Path(settings.MEDIA_ROOT)
+
+                    s = image_hash[:len(image_hash)//2]
+                    url = pyqrcode.create(s)   
+                    url.png(media_root / 'qr_codes' / 'default_qr.png', scale = 8)
+
                     watermark_path = media_root / 'qr_codes' / 'default_qr.png'
                     
                     # Create a watermarking instance
@@ -110,7 +118,9 @@ class ImageUploadView(generics.CreateAPIView):
                         'message': 'Image uploaded, verified, and watermarked successfully',
                         'image_id': image.id,
                         'verified': True,
-                        'image_url': request.build_absolute_uri(image.image.url)
+                        # 'image_url': request.build_absolute_uri(f"images/{image.id}")
+                        'image_url': request.build_absolute_uri(reverse('download-image', kwargs={'image_id': image.id}))
+
                     }, status=status.HTTP_201_CREATED)
                 
                 except Exception as e:
