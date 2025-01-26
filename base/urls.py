@@ -6,5 +6,4 @@ urlpatterns = [
     path('upload-image/', views.ImageUploadView.as_view(), name='upload-image'),
     path('images/', views.ImageListView.as_view(), name='image-list'),
     path('images/<int:image_id>/', views.ImageDownloadView.as_view(), name='download-image'),
-
 ]
