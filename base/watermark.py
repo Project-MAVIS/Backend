@@ -1,20 +1,24 @@
+from django.conf import settings
 import numpy as np
 import pywt
 from PIL import Image
 from scipy.fftpack import dct, idct
 from pathlib import Path
 
-
 class WaveletDCTWatermark:
     def __init__(self, base_path=None):
         """Initialize the watermarking system with base path"""
+        media_root = Path(settings.MEDIA_ROOT)
+        base_path = media_root
         self.base_path = Path(base_path) if base_path else Path.cwd()
         self.dataset_path = self.base_path / "dataset"
         self.result_path = self.base_path / "result"
 
-        # Watermark strength factor
-        self.alpha = 0.1
-
+        # Improved watermark parameters
+        self.alpha = 0.08  # Reduced for better imperceptibility
+        self.block_size = 8
+        self.dct_positions = [(4,4), (5,5), (6,6), (3,3)]  # Added more positions for redundancy
+        
         # Create necessary directories
         self.dataset_path.mkdir(exist_ok=True)
         self.result_path.mkdir(exist_ok=True)
@@ -25,11 +29,8 @@ class WaveletDCTWatermark:
             img = Image.open(image_path).resize((size, size), Image.Resampling.LANCZOS)
             if to_grayscale:
                 img = img.convert("L")
-                # Enhance contrast for QR code
                 img = self.enhance_qr_contrast(img)
-                image_array = np.array(img.getdata(), dtype=np.float64).reshape(
-                    (size, size)
-                )
+                image_array = np.array(img.getdata(), dtype=np.float64).reshape((size, size))
             else:
                 image_array = np.array(img, dtype=np.float64)
 
@@ -41,7 +42,7 @@ class WaveletDCTWatermark:
         except Exception as e:
             print(f"Error processing image {image_path}: {str(e)}")
             raise
-
+    
     def enhance_qr_contrast(self, img):
         """Enhance contrast for QR code"""
         img_array = np.array(img)
@@ -102,46 +103,6 @@ class WaveletDCTWatermark:
             print(f"Error processing coefficients: {str(e)}")
             raise
 
-    def embed_watermark(self, watermark_array, orig_image):
-        """Embed watermark in DCT coefficients with enhanced strength"""
-        try:
-            watermark_flat = watermark_array.ravel()
-            ind = 0
-
-            for x in range(0, orig_image.shape[0], 8):
-                for y in range(0, orig_image.shape[1], 8):
-                    if ind < len(watermark_flat):
-                        subdct = orig_image[x : x + 8, y : y + 8].copy()
-                        subdct[4][4] = watermark_flat[ind] * self.alpha
-                        subdct[5][5] = watermark_flat[ind] * self.alpha
-                        subdct[6][6] = watermark_flat[ind] * self.alpha
-                        orig_image[x : x + 8, y : y + 8] = subdct
-                        ind += 1
-
-            return orig_image
-        except Exception as e:
-            print(f"Error embedding watermark: {str(e)}")
-            raise
-
-    def get_watermark(self, dct_watermarked_coeff, watermark_size):
-        """Extract watermark from DCT coefficients with averaging"""
-        try:
-            subwatermarks = []
-            for x in range(0, dct_watermarked_coeff.shape[0], 8):
-                for y in range(0, dct_watermarked_coeff.shape[1], 8):
-                    coeff_slice = dct_watermarked_coeff[x : x + 8, y : y + 8]
-                    value = (
-                        coeff_slice[4][4] + coeff_slice[5][5] + coeff_slice[6][6]
-                    ) / (3 * self.alpha)
-                    subwatermarks.append(value)
-
-            watermark = np.array(subwatermarks).reshape(watermark_size, watermark_size)
-            watermark = self.enhance_recovered_watermark(watermark)
-            return watermark
-        except Exception as e:
-            print(f"Error extracting watermark: {str(e)}")
-            raise
-
     def enhance_recovered_watermark(self, watermark):
         """Enhance recovered watermark for better QR code visibility"""
         watermark = (
@@ -150,7 +111,7 @@ class WaveletDCTWatermark:
         threshold = self.otsu_threshold(watermark)
         watermark = np.where(watermark > threshold, 255, 0)
         return watermark
-
+    
     def apply_dct(self, image_array):
         """Apply DCT transform to image"""
         try:
@@ -193,8 +154,67 @@ class WaveletDCTWatermark:
             print(f"Error saving image: {str(e)}")
             raise
 
+    def embed_watermark(self, watermark_array, orig_image):
+        """Enhanced watermark embedding with multiple coefficient positions"""
+        try:
+            watermark_flat = watermark_array.ravel()
+            height, width = orig_image.shape
+            embedded = orig_image.copy()
+            ind = 0
+
+            for x in range(0, height - self.block_size + 1, self.block_size):
+                for y in range(0, width - self.block_size + 1, self.block_size):
+                    if ind < len(watermark_flat):
+                        block = embedded[x:x + self.block_size, y:y + self.block_size]
+                        dct_block = dct(dct(block.T, norm='ortho').T, norm='ortho')
+                        
+                        # Embed watermark in multiple positions with varying strengths
+                        for idx, (i, j) in enumerate(self.dct_positions):
+                            strength = self.alpha * (1.0 - idx * 0.15)  # Decreasing strength
+                            dct_block[i, j] = watermark_flat[ind] * strength
+                        
+                        # Apply inverse DCT
+                        idct_block = idct(idct(dct_block.T, norm='ortho').T, norm='ortho')
+                        embedded[x:x + self.block_size, y:y + self.block_size] = idct_block
+                        ind += 1
+
+            return embedded
+        except Exception as e:
+            print(f"Error embedding watermark: {str(e)}")
+            raise
+
+    def get_watermark(self, dct_watermarked_coeff, watermark_size):
+        """Enhanced watermark extraction with weighted averaging"""
+        try:
+            subwatermarks = []
+            height, width = dct_watermarked_coeff.shape
+            weights = [1.0, 0.85, 0.7, 0.5]  # Weights for different positions
+
+            for x in range(0, height - self.block_size + 1, self.block_size):
+                for y in range(0, width - self.block_size + 1, self.block_size):
+                    block = dct_watermarked_coeff[x:x + self.block_size, y:y + self.block_size]
+                    dct_block = dct(dct(block.T, norm='ortho').T, norm='ortho')
+                    
+                    # Extract and combine values from multiple positions
+                    weighted_sum = 0
+                    total_weight = 0
+                    
+                    for (i, j), weight in zip(self.dct_positions, weights):
+                        weighted_sum += dct_block[i, j] * weight
+                        total_weight += weight
+                    
+                    value = weighted_sum / (total_weight * self.alpha)
+                    subwatermarks.append(value)
+
+            watermark = np.array(subwatermarks[:(watermark_size * watermark_size)])
+            watermark = watermark.reshape(watermark_size, watermark_size)
+            return self.enhance_recovered_watermark(watermark)
+        except Exception as e:
+            print(f"Error extracting watermark: {str(e)}")
+            raise
+
     def watermark_image(self, image_path, watermark_path):
-        """Main watermarking process"""
+        """Enhanced main watermarking process with improved channel handling"""
         try:
             model = "haar"
             level = 1
@@ -205,48 +225,56 @@ class WaveletDCTWatermark:
 
             print("Processing and embedding watermark...")
             coeffs_image = self.process_coefficients(image_array, model, level)
-
-            # Handle each color channel separately
             watermarked_image = np.empty_like(image_array)
-            for channel in range(3):
-                dct_array = self.apply_dct(coeffs_image[channel][0])
-                # Embed watermark in both green and blue channels for redundancy
-                if channel in [1, 2]:  # Green, Blue channels
-                    dct_array = self.embed_watermark(watermark_array, dct_array)
-                coeffs_image[channel][0] = self.inverse_dct(dct_array)
-                watermarked_image[:, :, channel] = pywt.waverec2(
-                    coeffs_image[channel], model
-                )
 
-            print("Saving watermarked image as PNG...")
-            self.save_image(watermarked_image, "image_with_watermark.png", format="PNG")
+            # Enhanced channel handling
+            for channel in range(3):
+                channel_coeffs = coeffs_image[channel]
+                
+                if channel in [1, 2]:  # Green and Blue channels
+                    # Apply DCT and embed watermark
+                    dct_array = self.apply_dct(channel_coeffs[0])
+                    dct_array = self.embed_watermark(watermark_array, dct_array)
+                    channel_coeffs[0] = self.inverse_dct(dct_array)
+                
+                # Reconstruct the channel
+                watermarked_image[:, :, channel] = pywt.waverec2(channel_coeffs, model)
+
+            # Apply post-processing to maintain image quality
+            watermarked_image = np.clip(watermarked_image, 0, 255)
+            
+            print("Saving watermarked image...")
+            self.save_image(watermarked_image, "watermarked_image.png")
 
             return watermarked_image
+
         except Exception as e:
             print(f"Error in watermarking process: {str(e)}")
             raise
 
-    def recover_watermark(self, image_name, model="haar", level=1):
-        """Recover watermark from watermarked image with enhanced clarity"""
+    def recover_watermark(self, image_path, model="haar", level=1):
+        """Enhanced watermark recovery with multi-channel fusion"""
         try:
-            image_array = self.convert_image(image_name, 2048, to_grayscale=False)
-            coeffs_watermarked_image = self.process_coefficients(
-                image_array, model, level
-            )
+            print("Loading watermarked image...")
+            image_array = self.convert_image(image_path, 2048, to_grayscale=False)
+            coeffs = self.process_coefficients(image_array, model, level)
 
-            # Average watermarks from both green and blue channels
-            dct_green = self.apply_dct(coeffs_watermarked_image[1][0])
-            dct_blue = self.apply_dct(coeffs_watermarked_image[2][0])
+            # Extract watermarks from both channels with weights
+            green_coeffs = self.apply_dct(coeffs[1][0])
+            blue_coeffs = self.apply_dct(coeffs[2][0])
 
-            watermark_green = self.get_watermark(dct_green, 128)
-            watermark_blue = self.get_watermark(dct_blue, 128)
+            green_watermark = self.get_watermark(green_coeffs, 128)
+            blue_watermark = self.get_watermark(blue_coeffs, 128)
 
-            watermark_array = (watermark_green + watermark_blue) / 2
-            watermark_array = np.uint8(watermark_array)
+            # Weighted combination of watermarks
+            combined_watermark = (0.6 * green_watermark + 0.4 * blue_watermark)
+            combined_watermark = self.enhance_recovered_watermark(combined_watermark)
 
-            print("Saving recovered watermark as PNG...")
-            img = Image.fromarray(watermark_array)
-            img.save(self.result_path / "recovered_watermark.png", format="PNG")
+            print("Saving recovered watermark...")
+            self.save_image(combined_watermark, "recovered_watermark.png")
+            
+            return combined_watermark
+
         except Exception as e:
             print(f"Error recovering watermark: {str(e)}")
             raise

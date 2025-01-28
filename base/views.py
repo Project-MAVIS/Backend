@@ -45,6 +45,29 @@ class RegisterUserView(generics.CreateAPIView):
             'private_key': private_key
         }, status=status.HTTP_201_CREATED)
 
+class ImageVerifyView(generics.CreateAPIView):
+    serializer_class = ImageSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, image_id=None):
+        if image_id is None:
+            Response("Image id is null", status=status.HTTP_406_NOT_ACCEPTABLE)            
+        
+        try:
+            image_model = Image.objects.get(id= image_id)
+        except Exception as e:
+            Response("Image not found", status=status.HTTP_404_NOT_FOUND)
+
+        image_file = image_model.image
+
+        watermarker = WaveletDCTWatermark()
+
+        watermarker.recover_watermark(image_path=f'media/{image_file.name}')
+        return Response(
+            {"Success"},
+            status=status.HTTP_202_ACCEPTED
+        )
+
 class ImageUploadView(generics.CreateAPIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
@@ -91,7 +114,7 @@ class ImageUploadView(generics.CreateAPIView):
                     watermark_path = f'{media_root}/qr_codes/{default_qr}.png'
                     
                     # Create a watermarking instance
-                    watermarker = WaveletDCTWatermark(base_path=str(media_root))
+                    watermarker = WaveletDCTWatermark()
                     
                     # Get the path of the saved image
                     original_image_path = image.image.path
