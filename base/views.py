@@ -53,15 +53,20 @@ class ImageVerifyView(generics.CreateAPIView):
         if image_id is None:
             Response("Image id is null", status=status.HTTP_406_NOT_ACCEPTABLE)            
         
+        image_model = None
         try:
             image_model = Image.objects.get(id= image_id)
         except Exception as e:
             Response("Image not found", status=status.HTTP_404_NOT_FOUND)
-
+        
+        if image_model is None:            
+            Response("Image not found", status=status.HTTP_404_NOT_FOUND)
+        print(image_model)
+        
         image_file = image_model.image
 
         watermarker = WaveletDCTWatermark()
-
+        print(f'media/{image_file.name}')
         watermarker.recover_watermark(image_path=f'media/{image_file.name}')
         return Response(
             {"Success"},
@@ -126,7 +131,7 @@ class ImageUploadView(generics.CreateAPIView):
                     )
                     
                     # Get the watermarked image path from the watermarker
-                    watermarked_image_path = watermarker.result_path / 'image_with_watermark.png'
+                    watermarked_image_path = watermarker.result_path / 'image_with_watermark.jpg'
                     print(f"watermarked_image_path > {watermarked_image_path}")
                     
                     if os.path.exists(watermarked_image_path):
@@ -158,7 +163,7 @@ class ImageUploadView(generics.CreateAPIView):
                     
                     return Response({
                         'message': 'Image uploaded, verified, and watermarked successfully',
-                        'image_id': image.id,
+                        'image_id': (image.id + 1),
                         'verified': True,
                         # 'image_url': request.build_absolute_uri(f"images/{image.id}")
                         'image_url': request.build_absolute_uri(reverse('download-image', kwargs={'image_id': image.id}))
