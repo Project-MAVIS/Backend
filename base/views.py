@@ -111,7 +111,6 @@ class ImageUploadView(generics.CreateAPIView):
                     else:
                         print("Image not exist")
 
-                    watermarked_image_path = 'image_with_watermark.png'
                     # Read the watermarked image and update the model                    
                     with open(watermarked_image_path, 'rb') as f:
                         print("Saving image")
