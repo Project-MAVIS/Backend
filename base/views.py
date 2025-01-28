@@ -17,6 +17,8 @@ from rest_framework.views import APIView
 import pyqrcode 
 import png 
 from pyqrcode import QRCode 
+from datetime import datetime
+from django.core.files import File
 
 class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
@@ -54,7 +56,7 @@ class ImageUploadView(generics.CreateAPIView):
         try:
             signature = base64.b64decode(request.data.get('signature'))
             image_hash = request.data.get('image_hash')
-            username = request.data.get('username')
+            username = request.data.get('username', "no_name")
             
             if not username:
                 return Response({
@@ -83,9 +85,10 @@ class ImageUploadView(generics.CreateAPIView):
 
                     s = image_hash[:len(image_hash)//2]
                     url = pyqrcode.create(s)   
-                    url.png(media_root / 'qr_codes' / 'default_qr.png', scale = 8)
 
-                    watermark_path = media_root / 'qr_codes' / 'default_qr.png'
+                    default_qr = f"qr_for_{username}_{datetime.now()}"
+                    url.png(f'{media_root}/qr_codes/{default_qr}.png', scale = 8)
+                    watermark_path = f'{media_root}/qr_codes/{default_qr}.png'
                     
                     # Create a watermarking instance
                     watermarker = WaveletDCTWatermark(base_path=str(media_root))
@@ -100,15 +103,32 @@ class ImageUploadView(generics.CreateAPIView):
                     )
                     
                     # Get the watermarked image path from the watermarker
-                    watermarked_image_path = watermarker.result_path / 'image_with_watermark.jpg'
+                    watermarked_image_path = watermarker.result_path / 'image_with_watermark.png'
+                    print(f"watermarked_image_path > {watermarked_image_path}")
                     
-                    # Read the watermarked image and update the model
+                    if os.path.exists(watermarked_image_path):
+                        print("Image exists")
+                    else:
+                        print("Image not exist")
+
+                    watermarked_image_path = 'image_with_watermark.png'
+                    # Read the watermarked image and update the model                    
                     with open(watermarked_image_path, 'rb') as f:
-                        image.image.save(
-                            f'watermarked_{Path(original_image_path).name}',
-                            ContentFile(f.read()),
-                            save=True
+                        print("Saving image")
+                        image_file = File(f, name='image_with_watermark.png')  # 'name' is the filename to store
+
+                        Image.objects.create(
+                            user=user,
+                            image=image_file,
+                            image_hash=image_hash,
+                            verified=True,
                         )
+                        print("Image saved")
+                        # image.image.save(
+                        #     f'watermarked_{Path(original_image_path).name}',
+                        #     ContentFile(f.read()),
+                        #     save=True
+                        # )
                     
                     # Clean up temporary files if needed
                     if os.path.exists(watermarked_image_path):
@@ -133,6 +153,7 @@ class ImageUploadView(generics.CreateAPIView):
             }, status=status.HTTP_400_BAD_REQUEST)
             
         except Exception as e:
+            print("Error here")
             return Response({
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
