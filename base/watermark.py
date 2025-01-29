@@ -4,6 +4,8 @@ import pywt
 from PIL import Image
 from scipy.fftpack import dct, idct
 from pathlib import Path
+import cv2
+from pyzbar.pyzbar import decode
 
 class WaveletDCTWatermark:
     def __init__(self, base_path=None):
@@ -259,38 +261,72 @@ class WaveletDCTWatermark:
         except Exception as e:
             print(f"Error recovering watermark: {str(e)}")
             raise
+    
+    def read_qr_code(self, image_path):
+        try:
+            # Read the image
+            image = cv2.imread(image_path)
+            
+            if image is None:
+                raise ValueError(f"Could not read image at {image_path}")
+            
+            # Convert to grayscale
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            
+            # Decode QR codes
+            qr_codes = decode(gray)
+            
+            if not qr_codes:
+                print("No QR codes found in the image")
+                return []
+            
+            results = []
+            for qr in qr_codes:
+                # Convert bytes to string
+                data = qr.data.decode('utf-8')
+                results.append({
+                    'data': data,
+                    'type': qr.type,
+                    'position': qr.rect
+                })
+                
+            return results
+        
+        except Exception as e:
+            print(f"Error reading QR code: {str(e)}")
+            raise e
 
-def main():
-    """Example usage"""
-    try:
-        # Initialize watermarking system
-        watermarker = WaveletDCTWatermark()
+# def main():
+#     """Example usage"""
+#     try:
+#         # Initialize watermarking system
+#         watermarker = WaveletDCTWatermark()
 
-        # Get input paths
-        image_path = Path("./media/me.jpeg")
-        watermark_path = Path("./media/abc.png")
+#         # Get input paths
+#         image_path = Path("./media/me.jpeg")
+#         watermark_path = Path("./media/abc.png")
 
-        # Validate paths
-        if not image_path.exists():
-            raise FileNotFoundError(f"Original image not found: {image_path}")
-        if not watermark_path.exists():
-            raise FileNotFoundError(f"Watermark image not found: {watermark_path}")
+#         # Validate paths
+#         if not image_path.exists():
+#             raise FileNotFoundError(f"Original image not found: {image_path}")
+#         if not watermark_path.exists():
+#             raise FileNotFoundError(f"Watermark image not found: {watermark_path}")
 
-        # Process watermarking
-        print("\nProcessing watermark...")
-        watermarker.watermark_image(image_path, watermark_path)
+#         # Process watermarking
+#         print("\nProcessing watermark...")
+#         watermarker.watermark_image(image_path, watermark_path)
 
-        print("Extracting watermark...")
-        watermarker.recover_watermark(image_path="/home/omkar/Desktop/Backend/base/media/result/image_with_watermark.jpg")
-        # watermarker.recover_watermark(image_name="./man_water_2.jpeg")
+#         print("Extracting watermark...")
+#         watermarker.recover_watermark(image_path="/home/omkar/Desktop/Backend/base/media/result/image_with_watermark.jpg")
+#         # watermarker.recover_watermark(image_name="./man_water_2.jpeg")
 
-        print("\nResults saved:")
-        print("- Watermarked image: ./result/image_with_watermark.jpg")
-        print("- Recovered watermark: ./result/recovered_watermark.jpg")
+#         print("\nResults saved:")
+#         print("- Watermarked image: ./result/image_with_watermark.jpg")
+#         print("- Recovered watermark: ./result/recovered_watermark.jpg")
 
-    except Exception as e:
-        print(f"\nError: {str(e)}")
-        print("Watermarking process failed.")
+#     except Exception as e:
+#         print(f"\nError: {str(e)}")
+#         print("Watermarking process failed.")
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

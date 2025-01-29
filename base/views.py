@@ -19,6 +19,7 @@ import png
 from pyqrcode import QRCode 
 from datetime import datetime
 from django.core.files import File
+from django.conf import settings
 
 class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
@@ -49,29 +50,45 @@ class ImageVerifyView(generics.CreateAPIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request, image_id=None):
-        if image_id is None:
-            Response("Image id is null", status=status.HTTP_406_NOT_ACCEPTABLE)            
-        
-        image_model = None
+    def post(self, request):
         try:
-            image_model = Image.objects.get(id= image_id)
-        except Exception as e:
-            Response("Image not found", status=status.HTTP_404_NOT_FOUND)
-        
-        if image_model is None:            
-            Response("Image not found", status=status.HTTP_404_NOT_FOUND)
-        print(image_model)
-        
-        image_file = image_model.image
+                
+            # Check if the request contains the file
+            if 'image' not in request.FILES:
+                return Response({'error': 'No file uploaded'}, status=400)
+            
+            file = request.FILES['image']
 
-        watermarker = WaveletDCTWatermark()
-        print(f'media/{image_file.name}')
-        watermarker.recover_watermark(image_path=f'media/{image_file.name}')
-        return Response(
-            {"Success"},
-            status=status.HTTP_202_ACCEPTED
-        )
+            # Define the directory where you want to save the uploaded file
+            upload_dir = os.path.join(settings.MEDIA_ROOT, 'verify')
+
+            # Ensure the directory exists
+            if not os.path.exists(upload_dir):
+                os.makedirs(upload_dir)
+
+            # Save the file to the directory
+            file_path = os.path.join(upload_dir, file._name)
+            with open(file_path, 'wb') as f:
+                for chunk in file.chunks():
+                    f.write(chunk)
+
+            watermarker = WaveletDCTWatermark()
+            watermarker.recover_watermark(image_path=f'{settings.MEDIA_ROOT}/verify/{file._name}')
+            
+            hash = watermarker.read_qr_code(f'{settings.MEDIA_ROOT}/result/recovered_watermark.jpg')
+                    
+            values = Image.objects.filter(image_hash=hash[0]['data'])
+            # Return a success response
+            if len(values) >= 1:
+                return Response({
+                    "status": "verified"
+                })
+            else:
+                return Response({
+                    "status": "Not verified"
+                })
+        except Exception as e:
+            return Response({"message": f"There was an error: {str(e)}"}, status=200)
 
 class ImageUploadView(generics.CreateAPIView):
     serializer_class = ImageSerializer
@@ -147,15 +164,10 @@ class ImageUploadView(generics.CreateAPIView):
                         Image.objects.create(
                             user=user,
                             image=image_file,
-                            image_hash=image_hash,
+                            image_hash=s,
                             verified=True,
                         )
                         print("Image saved")
-                        # image.image.save(
-                        #     f'watermarked_{Path(original_image_path).name}',
-                        #     ContentFile(f.read()),
-                        #     save=True
-                        # )
                     
                     # Clean up temporary files if needed
                     if os.path.exists(watermarked_image_path):
