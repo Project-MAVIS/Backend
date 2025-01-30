@@ -33,3 +33,4 @@ class ImageSerializer(serializers.ModelSerializer):
             new_filename = f"{username}_{timestamp}_{original_filename}"
             image_file.name = new_filename
             return super().create(validated_data)        
+    

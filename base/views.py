@@ -20,6 +20,16 @@ from pyqrcode import QRCode
 from datetime import datetime
 from django.core.files import File
 from django.conf import settings
+import hashlib
+from rest_framework.decorators import api_view
+
+@api_view(['GET'])
+def truncate(request):
+    try:
+        Image.objects.all().delete()
+    except Exception as e:
+        return Response({"Status":"Exception", "message":str(e)})
+    return Response({"Status":"Complete"})
 
 class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
@@ -100,8 +110,12 @@ class ImageUploadView(generics.CreateAPIView):
         
         try:
             signature = base64.b64decode(request.data.get('signature'))
-            image_hash = request.data.get('image_hash')
-            username = request.data.get('username', "no_name")
+            image_obj = serializer.validated_data['image']
+
+            image_hash = hashlib.sha256(image_obj.read()).hexdigest()
+            # image_hash = request.data.get('image_hash')            
+            
+            username = request.data.get('username')
             
             if not username:
                 return Response({
@@ -120,9 +134,26 @@ class ImageUploadView(generics.CreateAPIView):
                     'error': 'User keys not found'
                 }, status=status.HTTP_404_NOT_FOUND)
 
+            # If Image hash is already present in the models and is verified, then there immediately send the link from here
+            # =======================# UNCOMMENT BEFORE PROD #=======================
+            # try:
+            #     prev_image = Image.objects.get(image_hash=image_hash, user= user)
+            #     print("Image already exists")
+            #     return Response({
+            #                 'message': 'Already exists.',
+            #                 'image_id': (prev_image.id + 1),
+            #                 'verified': True,
+            #                 'image_url': request.build_absolute_uri(reverse('download-image', kwargs={'image_id': prev_image.id}))
+
+            #             }, status=status.HTTP_200_OK)
+            # except Exception as e:
+            #     print(f"New image, {str(e)}")
+            # #=======================#=======================#=======================
+
+
             if verify_signature(user_keys.public_key, signature, image_hash.encode()):
                 # Save the original image first
-                image = serializer.save(user=user, verified=True)
+                image = serializer.save(user=user, verified=False)
                 
                 try:
                     # Setup paths for watermarking

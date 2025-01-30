@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+import os
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 class UserKeys(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -20,3 +23,11 @@ class Image(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.username} -> {self.uploaded_at}"
+
+@receiver(pre_delete, sender=Image)
+def delete_image_file(sender, instance, **kwargs):
+    """Delete the image file when the Image model instance is deleted."""
+    if instance.image:
+        # Check if the file exists
+        if os.path.isfile(instance.image.path):
+            os.remove(instance.image.path)  # Delete the file
