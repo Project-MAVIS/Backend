@@ -1,4 +1,5 @@
 # Python standard library
+import io
 import os
 import base64
 import hashlib
@@ -8,7 +9,7 @@ from datetime import datetime
 # Django imports
 from django.urls import reverse
 from django.conf import settings
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from django.core.files import File
@@ -27,6 +28,11 @@ from cryptography.hazmat.backends import default_backend
 
 # QR Code related
 import pyqrcode
+import png
+
+# Image processing
+import numpy as np
+from PIL import Image as PILImage
 
 # Local imports
 from .models import UserKeys, Image
@@ -385,5 +391,93 @@ class SignHashView(APIView):
         except Exception as e:
             return Response(
                 {"error": f"Error signing hash: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class GenerateQRView(APIView):
+    def post(self, request):
+        """
+        Generate QR code from the first half of a hash value
+        """
+
+        # Get hash from request
+        hash_value = request.data.get("hash")
+
+        if not hash_value:
+            return Response(
+                {"error": "Hash value is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Get first half of hash
+            half_hash = hash_value[: len(hash_value) // 2]
+
+            # Create QR code
+            qr = pyqrcode.create(half_hash)
+
+            # Create a bytes buffer to store the PNG
+            buffer = io.BytesIO()
+            qr.png(buffer, scale=8)
+            buffer.seek(0)
+
+            # Create response with PNG mime type
+            response = HttpResponse(buffer.getvalue(), content_type="image/png")
+            response["Content-Disposition"] = 'inline; filename="qr_code.png"'
+
+            return response
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error generating QR code: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class WatermarkImageView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        """
+        Embed QR code watermark into original image
+        """
+        # Check if both files are in request
+        if "original_image" not in request.FILES or "qr_code" not in request.FILES:
+            return Response(
+                {"error": "Both original image and QR code are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Get files from request
+            original_image = request.FILES["original_image"]
+            qr_code = request.FILES["qr_code"]
+
+            # Initialize watermarking system
+            watermarker = WaveletDCTWatermark()
+
+            # Process watermarking
+            watermarked_array = watermarker.watermark_image_from_view(
+                PILImage.open(original_image), PILImage.open(qr_code)
+            )
+
+            watermarked_image = PILImage.fromarray(watermarked_array)
+
+            # Save to bytes buffer
+            buffer = io.BytesIO()
+            watermarked_image.save(buffer, format="JPEG")
+            buffer.seek(0)
+
+            # Create response
+            response = HttpResponse(buffer.getvalue(), content_type="image/jpeg")
+            response["Content-Disposition"] = (
+                'inline; filename="watermarked_image.jpeg"'
+            )
+
+            return response
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error in watermarking process: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
