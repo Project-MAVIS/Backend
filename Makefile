@@ -7,7 +7,7 @@ VENV_NAME = .venv
 
 help:  ## Show this help menu
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	
+
 keys:
 	chmod +x keys.sh
 	sh keys.sh
@@ -20,6 +20,9 @@ venv:  ## Create virtual environment in current directory
 setup: venv  ## Install project dependencies
 	poetry config virtualenvs.in-project true
 	$(POETRY) install --no-root
+
+start:  ## Start the development server
+	$(POETRY) run python manage.py runserver
 
 clean:  ## Remove virtual environment and cache
 	rm -rf $(VENV_NAME)
