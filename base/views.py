@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
+from rest_framework.request import Request
 
 # Cryptography
 from cryptography.hazmat.primitives import hashes, serialization
@@ -437,7 +438,7 @@ class GenerateQRView(APIView):
 class WatermarkImageView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request):
+    def post(self, request: Request):
         """
         Embed QR code watermark into original image
         """
@@ -453,7 +454,9 @@ class WatermarkImageView(APIView):
             original_image = request.FILES["original_image"]
             qr_code = request.FILES["qr_code"]
 
-            # Initialize watermarking system
+            # Get format from query params, default to None
+            output_format = request.data.get("format")
+
             watermarker = WaveletDCTWatermark()
 
             # Process watermarking
@@ -463,15 +466,20 @@ class WatermarkImageView(APIView):
 
             watermarked_image = PILImage.fromarray(watermarked_array)
 
+            if output_format is None:
+                output_format = "JPEG"
+
             # Save to bytes buffer
             buffer = io.BytesIO()
-            watermarked_image.save(buffer, format="JPEG")
+            watermarked_image.save(buffer, format=output_format.upper())
             buffer.seek(0)
 
             # Create response
-            response = HttpResponse(buffer.getvalue(), content_type="image/jpeg")
+            response = HttpResponse(
+                buffer.getvalue(), content_type=f"image/{output_format.lower()}"
+            )
             response["Content-Disposition"] = (
-                'inline; filename="watermarked_image.jpeg"'
+                f'inline; filename="watermarked_image.{output_format.lower()}"'
             )
 
             return response
@@ -479,5 +487,48 @@ class WatermarkImageView(APIView):
         except Exception as e:
             return Response(
                 {"error": f"Error in watermarking process: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class WatermarkRecoveryView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        """
+        Recover QR code watermark from a watermarked image
+        """
+        if "image" not in request.FILES:
+            return Response(
+                {"error": "Watermarked image is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Get watermarked image from request
+            watermarked_image = request.FILES["image"]
+
+            # Recover watermark
+            watermarker = WaveletDCTWatermark()
+            recovered_image_arr = watermarker.frecover_watermark(
+                PILImage.open(watermarked_image)
+            )
+
+            recovered_image = PILImage.fromarray(recovered_image_arr)
+
+            buffer = io.BytesIO()
+            recovered_image.save(buffer, format="JPEG")
+            buffer.seek(0)
+
+            response = HttpResponse(buffer.getvalue(), content_type="image/jpeg")
+            response["Content-Disposition"] = (
+                'inline; filename="recovered_watermark.jpg"'
+            )
+
+            return response
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error in watermark recovery process: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

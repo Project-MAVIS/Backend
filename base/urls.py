@@ -11,6 +11,7 @@ urlpatterns = [
     path('calculate-hash/', views.CalculateImageHashView.as_view(), name='calculate-hash'),
     path('sign-hash/', views.SignHashView.as_view(), name='sign-hash'),
     path('generate-qr/', views.GenerateQRView.as_view(), name='generate-qr'),
-    path('watermark-image/', views.WatermarkImageView.as_view(), name='watermark'),
+    path('watermark-image/', views.WatermarkImageView.as_view(), name='watermark-image'),
+    path('recover-watermark/', views.WatermarkRecoveryView.as_view(), name='recover-watermark'),
     path('truncate', views.truncate, name="truncate")
 ]
