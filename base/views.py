@@ -25,14 +25,11 @@ from rest_framework.request import Request
 # Cryptography
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.backends import default_backend
 
 # QR Code related
 import pyqrcode
-import png
 
 # Image processing
-import numpy as np
 from PIL import Image as PILImage
 
 # Local imports
