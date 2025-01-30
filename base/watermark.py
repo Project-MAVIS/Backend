@@ -40,10 +40,21 @@ class WaveletDCTWatermark:
             Exception: If there is an error processing the image.
         """
         try:
-            img = Image.open(image_path).resize((size, size), Image.Resampling.LANCZOS)
+            img = Image.open(image_path).convert("RGBA")  # Convert to RGBA first
+
+            # Handle alpha channel for PNG
+            if img.mode == "RGBA":
+                # Create white background
+                background = Image.new("RGBA", img.size, (255, 255, 255, 255))
+                # Composite the image onto the background
+                img = Image.alpha_composite(background, img)
+
+            # Convert to RGB for processing
+            img = img.convert("RGB")
+            img = img.resize((size, size), Image.Resampling.LANCZOS)
+
             if to_grayscale:
                 img = img.convert("L")
-                # Enhance contrast for QR code
                 img = self.enhance_qr_contrast(img)
                 image_array = np.array(img.getdata(), dtype=np.float64).reshape(
                     (size, size)
@@ -80,10 +91,22 @@ class WaveletDCTWatermark:
             Exception: If there is an error processing the image.
         """
         try:
-            img = image.resize((size, size), Image.Resampling.LANCZOS)
+            # Convert to RGBA first
+            img = image.convert("RGBA")
+
+            # Handle alpha channel for PNG
+            if img.mode == "RGBA":
+                # Create white background
+                background = Image.new("RGBA", img.size, (255, 255, 255, 255))
+                # Composite the image onto the background
+                img = Image.alpha_composite(background, img)
+
+            # Convert to RGB for processing
+            img = img.convert("RGB")
+            img = img.resize((size, size), Image.Resampling.LANCZOS)
+
             if to_grayscale:
                 img = img.convert("L")
-                # Enhance contrast for QR code
                 img = self.enhance_qr_contrast(img)
                 image_array = np.array(img.getdata(), dtype=np.float64).reshape(
                     (size, size)
@@ -260,16 +283,49 @@ class WaveletDCTWatermark:
             image_array_copy = image_array.clip(0, 255)
             image_array_copy = image_array_copy.astype("uint8")
             img = Image.fromarray(image_array_copy)
-            img.save(self.result_path / name)
+
+            # Determine output format based on filename
+            output_format = "PNG" if name.lower().endswith(".png") else "JPEG"
+
+            if output_format == "PNG":
+                img.save(self.result_path / name, format=output_format, optimize=True)
+            else:
+                img.save(
+                    self.result_path / name,
+                    format=output_format,
+                    quality=95,
+                    optimize=True,
+                )
+
         except Exception as e:
             print(f"Error saving image: {str(e)}")
             raise
 
     def watermark_image(self, image_path, watermark_path):
-        """Main watermarking process"""
+        """Main watermarking process that saves the watermarked image to disk.
+
+        This method embeds a watermark into an image by applying wavelet transform and DCT,
+        then embedding the watermark in both green and blue channels for redundancy.
+        The result is saved to disk - useful for local testing.
+
+        Args:
+            image_path (str): Path to the original image file
+            watermark_path (str): Path to the watermark image file
+
+        Returns:
+            numpy.ndarray: The watermarked image array
+
+        Raises:
+            Exception: If there is an error during the watermarking process.
+            The specific error message is printed before re-raising.
+        """
         try:
             model = "haar"
             level = 1
+
+            # Get input image format
+            input_format = Path(image_path).suffix.lower()
+            output_filename = f"image_with_watermark{input_format}"
 
             print("Converting images...")
             image_array = self.convert_image(image_path, 2048, to_grayscale=False)
@@ -291,7 +347,7 @@ class WaveletDCTWatermark:
                 )
 
             print("Saving watermarked image...")
-            self.save_image(watermarked_image, "image_with_watermark.jpg")
+            self.save_image(watermarked_image, output_filename)
             print("watermarked image saved")
 
             return watermarked_image
@@ -299,8 +355,23 @@ class WaveletDCTWatermark:
             print(f"Error in watermarking process: {str(e)}")
             raise
 
-    def watermark_image_from_view(self, original_image, watermark):
-        """Watermark image received directly from view"""
+    def fwatermark_image(self, original_image, watermark):
+        """Watermark image received directly from view, returning the watermarked image array.
+
+        Similar to watermark_image() but takes PIL Image objects directly instead of file paths
+        and returns the watermarked image array without saving to disk - useful for API endpoints.
+
+        Args:
+            original_image (PIL.Image.Image): PIL Image object of the original image
+            watermark (PIL.Image.Image): PIL Image object of the watermark
+
+        Returns:
+            numpy.ndarray: The watermarked image array as uint8 type, ready for conversion to PIL Image
+
+        Raises:
+            Exception: If there is an error during the watermarking process.
+            The specific error message is printed before re-raising.
+        """
         try:
             model = "haar"
             level = 1
@@ -330,7 +401,21 @@ class WaveletDCTWatermark:
             raise
 
     def recover_watermark(self, image_path, model="haar", level=1):
-        """Recover watermark from watermarked image with enhanced clarity"""
+        """Recover watermark from a watermarked image file.
+
+        This method extracts the embedded watermark from both the green and blue channels
+        of a watermarked image file, averages them for better clarity, and saves the
+        recovered watermark as a JPEG file.
+
+        Args:
+            image_path (str): Path to the watermarked image file
+            model (str, optional): Wavelet transform model to use. Defaults to "haar".
+            level (int, optional): Level of wavelet decomposition. Defaults to 1.
+
+        Raises:
+            Exception: If there is an error during the watermark recovery process.
+            The specific error message is printed before re-raising.
+        """
         try:
             image_array = self.convert_image(image_path, 2048, to_grayscale=False)
             coeffs_watermarked_image = self.process_coefficients(
@@ -351,6 +436,47 @@ class WaveletDCTWatermark:
             # Save recovered watermark
             img = Image.fromarray(watermark_array)
             img.save(self.result_path / "recovered_watermark.jpg")
+        except Exception as e:
+            print(f"Error recovering watermark: {str(e)}")
+            raise
+
+    def frecover_watermark(self, image: Image.Image, model="haar", level=1):
+        """Recover watermark from a PIL Image object.
+
+        Similar to recover_watermark() but takes a PIL Image directly instead of a file path.
+        This method extracts the embedded watermark from both the green and blue channels
+        of a watermarked image and averages them for better clarity.
+
+        Args:
+            image (PIL.Image.Image): PIL Image object containing the watermarked image
+            model (str, optional): Wavelet transform model to use. Defaults to "haar".
+            level (int, optional): Level of wavelet decomposition. Defaults to 1.
+
+        Returns:
+            numpy.ndarray: Recovered watermark as a numpy array with uint8 dtype.
+
+        Raises:
+            Exception: If there is an error during the watermark recovery process.
+            The specific error message is printed before re-raising.
+        """
+        try:
+            image_array = self.fconvert_image(image, 2048, to_grayscale=False)
+            coeffs_watermarked_image = self.process_coefficients(
+                image_array, model, level
+            )
+
+            # Average watermarks from both green and blue channels
+            dct_green = self.apply_dct(coeffs_watermarked_image[1][0])
+            dct_blue = self.apply_dct(coeffs_watermarked_image[2][0])
+
+            watermark_green = self.get_watermark(dct_green, 128)
+            watermark_blue = self.get_watermark(dct_blue, 128)
+
+            # Average the watermarks from both channels
+            watermark_array = (watermark_green + watermark_blue) / 2
+            watermark_array = np.uint8(watermark_array)
+
+            return watermark_array
         except Exception as e:
             print(f"Error recovering watermark: {str(e)}")
             raise

@@ -460,7 +460,7 @@ class WatermarkImageView(APIView):
             watermarker = WaveletDCTWatermark()
 
             # Process watermarking
-            watermarked_array = watermarker.watermark_image_from_view(
+            watermarked_array = watermarker.fwatermark_image(
                 PILImage.open(original_image), PILImage.open(qr_code)
             )
 
