@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+# Black formatter is disabled here because it messes up the formatting of the code
+# fmt: off
 urlpatterns = [
     path('register/', views.RegisterUserView.as_view(), name='register'),
     path('upload-image/', views.ImageUploadView.as_view(), name='upload-image'),
@@ -13,5 +15,6 @@ urlpatterns = [
     path('generate-qr/', views.GenerateQRView.as_view(), name='generate-qr'),
     path('watermark-image/', views.WatermarkImageView.as_view(), name='watermark-image'),
     path('recover-watermark/', views.WatermarkRecoveryView.as_view(), name='recover-watermark'),
-    path('truncate', views.truncate, name="truncate")
+    path('truncate', views.truncate, name="truncate"),
+    path('ping', views.ping, name="ping"),
 ]

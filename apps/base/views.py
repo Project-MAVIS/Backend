@@ -40,7 +40,12 @@ from .watermark import WaveletDCTWatermark
 
 
 @api_view(["GET"])
-def truncate(request):
+def ping(_) -> Response:
+    return Response("pong")
+
+
+@api_view(["GET"])
+def truncate(_):
     try:
         Image.objects.all().delete()
     except Exception as e:
@@ -52,7 +57,7 @@ class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
     permission_classes = (permissions.AllowAny,)
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -79,7 +84,7 @@ class ImageVerifyView(generics.CreateAPIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request):
+    def post(self, request: Request):
         try:
 
             # Check if the request contains the file
