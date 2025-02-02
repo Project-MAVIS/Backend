@@ -2,6 +2,8 @@ import struct
 import time
 from dataclasses import dataclass
 from typing import Tuple
+from .models import Image, DeviceKeys
+from django.contrib.auth.models import User
 
 @dataclass
 class ImageCertificate:
@@ -13,6 +15,60 @@ class ImageCertificate:
     device_id: int
     username: str
     device_name: str
+
+def calculate_cert_length(username: str, device_name: str) -> int:
+    """
+    Calculate the total certificate length based on the fixed fields and variable length strings.
+    
+    Fixed fields:
+    - cert_len: 1 byte
+    - timestamp: 8 bytes
+    - image_id: 8 bytes
+    - user_id: 4 bytes
+    - device_id: 4 bytes
+    - username_length: 1 byte
+    - device_name_length: 1 byte
+    
+    Variable fields:
+    - username: len(username) bytes
+    - device_name: len(device_name) bytes
+    """
+    username_bytes = len(username.encode('utf-8'))
+    device_name_bytes = len(device_name.encode('utf-8'))
+    
+    # Fixed fields total: 1 + 8 + 8 + 4 + 4 + 1 + 1 = 27 bytes
+    fixed_fields_length = struct.calcsize('>BQQII') + 2  # +2 for the length fields
+    
+    # Total length is fixed fields plus variable length strings
+    total_length = fixed_fields_length + username_bytes + device_name_bytes
+    
+    return total_length
+
+def create_certificate(image: Image, device_key: DeviceKeys, timestamp: int=int(time.time())) -> str:
+    user: User = image.device_key.user
+    time_stamp = timestamp
+    image_id = image.id
+    user_id = user.id
+    device_key_id = device_key.id
+    user_name = user.username
+    device_name = device_key.name
+    
+    cert = ImageCertificate(
+        cert_len=calculate_cert_length(username=user_name, device_name=device_name),
+        timestamp=time_stamp,
+        image_id=image_id,
+        user_id=user_id,
+        device_id=device_key_id,
+        username=user_name,
+        device_name=device_name
+    )
+
+    serialized_data = serialize_certificate(cert)
+    # print(serialized_data)
+    print(serialized_data.hex())
+
+    return serialized_data.hex()
+
 
 def serialize_certificate(cert: ImageCertificate) -> bytes:
     """

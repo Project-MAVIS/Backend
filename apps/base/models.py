@@ -5,7 +5,8 @@ from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
 class DeviceKeys(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.TextField()
     public_key = models.TextField()
     private_key = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -14,7 +15,6 @@ class DeviceKeys(models.Model):
         return self.user.username
 
 class Image(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     device_key = models.ForeignKey(DeviceKeys, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='images/')
     image_hash = models.CharField(max_length=128)
