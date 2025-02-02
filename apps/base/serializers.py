@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserKeys, Image
+from .models import DeviceKeys, Image
 from datetime import datetime
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)

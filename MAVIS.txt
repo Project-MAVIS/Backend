@@ -1,0 +1,84 @@
+DCT
+
+GAN
+
+Watermarking
+
+QR Code
+
+MAVIS
+
+Metadata {MAVIS-Secret}
+
+
+{IMAGE}
+-------------------------------------------------------------------------------------------------------------------------
+$ (metadata) | {MAVIS-Secret} $		(image-pixel-data)	| watermark({MAVIS-Secret})				$
+-------------------------------------------------------------------------------------------------------------------------
+
+(1)
+What should be {MAVIS-Secret}?
+	- hash of the image?
+	- 4-5 byte user?
+	- user public key? + user/device signed certificate (done int the client device's secure enclave)
+	- MAVIS Server public key? + certificate
+	- trusted timestamp
+
+(2) whether to append {MAVIS-Secret} to image (metadata)?
+	- YES
+
+(3) whether to append "watermarked" {MAVIS-Secret} to (image-pixel-data)?
+	- YES
+
+(4) For MVP deal with PNG files only and don't worry about lossy files like JPEGs. 
+
+-----------------------------------------------------------MVP DONE (make sure it works E2E before moving ahead)---------
+
+(5) Image can be changed or be lossy - if we want to protect against those losess the watermark must be resilient. 
+	- QR Code adds to that resiliency?
+		- YES
+{IMAGE}
+-------------------------------------------------------------------------------------------------------------------------
+$ (metadata) | {MAVIS-Secret} $		(image-pixcel-data)	| watermark(QR-Codify({MAVIS-Secret}))			$
+-------------------------------------------------------------------------------------------------------------------------
+*That's why 5 is extra credit work*
+
+================================
+(6) Sphisticated ways of watermarking an image. 
+
+  |------------------------->  (6.1)	DCT -> Deals with image edits. generating frequency maps, embdding them in QR code, and adding that QR code as watermark will help us detect the "source" even when the image is modified.
+  |						
+  |
+  |------------------------->  (6.2) 	GAN -> Deep neural way of watermarking an image + identifying if an image is watermarked or not + retrieving that watermark?
+
+(1234) {len=4 pos={r1c2, r3c5, r5c2, r2c6}}
+
+abaaaaaaaaaaaaaaa
+bbbbbbfbbbbbbbbbb
+ccccceccccccccccc
+ddddddddddddddddd
+eheeeeeeeeeeeeeee
+fffffffffffffffff
+ggggggggggggggggg
+
+
+--------------------------------------
+Our MVP => (1) + (2) + (3) + (4) + whatever boilerplate infra needed for E2E demo.
+----
+Our final product => MVP + (5) + (6.1) + whatever is PICT requirement for project completion.
+===================================================================================================
+
+
+
+
+
+
+
+
+
+===================================================================================================
+admin creds:
+username:
+notomkar
+password:
+omkar

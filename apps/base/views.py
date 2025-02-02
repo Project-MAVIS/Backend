@@ -33,7 +33,7 @@ import pyqrcode
 from PIL import Image as PILImage
 
 # Local imports
-from .models import UserKeys, Image
+from .models import DeviceKeys, Image
 from .serializers import UserSerializer, ImageSerializer
 from .utils import generate_key_pair, verify_signature
 from .watermark import WaveletDCTWatermark
@@ -64,7 +64,7 @@ class RegisterUserView(generics.CreateAPIView):
 
         # Generate and save key pair
         private_key, public_key = generate_key_pair()
-        UserKeys.objects.create(
+        DeviceKeys.objects.create(
             user=user, private_key=private_key, public_key=public_key
         )
 
@@ -150,12 +150,12 @@ class ImageUploadView(generics.CreateAPIView):
 
             try:
                 user = User.objects.get(username=username)
-                user_keys = UserKeys.objects.get(user=user)
+                user_keys = DeviceKeys.objects.get(user=user)
             except User.DoesNotExist:
                 return Response(
                     {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
                 )
-            except UserKeys.DoesNotExist:
+            except DeviceKeys.DoesNotExist:
                 return Response(
                     {"error": "User keys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
@@ -360,7 +360,7 @@ class SignHashView(generics.CreateAPIView):
         try:
             # Get user's private key
             user = User.objects.get(username=username)
-            user_keys = UserKeys.objects.get(user=user)
+            user_keys = DeviceKeys.objects.get(user=user)
             private_key_pem = user_keys.private_key
 
             # Load the private key
@@ -387,7 +387,7 @@ class SignHashView(generics.CreateAPIView):
             return Response(
                 {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
             )
-        except UserKeys.DoesNotExist:
+        except DeviceKeys.DoesNotExist:
             return Response(
                 {"error": "User keys not found"}, status=status.HTTP_404_NOT_FOUND
             )

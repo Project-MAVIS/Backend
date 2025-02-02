@@ -1,0 +1,21 @@
+===============
+
+certificate length <- constant length 8 bits
+timestamp <- constant size 64 bits
+image id <- constant size 64 bits
+
+user id <- constant size 32 bits
+user name size <- constant size 32 bits
+user name <- Assumed to be 20 characters ASCII
+
+device_key id <- constant size 32 bits
+device name size <- constant size 32 bits
+device name <- Assumed to be 20 characters ASCII
+
+8 + 64 * 2 + 32 * 2 + 8 * 2 + 20 * 8 * 2 == 536 (max case in bits)
+
+===============
+device id gives on some endpoint:
+1. user info
+2. device specs
+3. description or something?
