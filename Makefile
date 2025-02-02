@@ -1,7 +1,7 @@
 .PHONY: setup install clean format lint test coverage serve help
 
 # Variables
-PYTHON = python3.11
+PYTHON = python3
 POETRY = poetry
 VENV_NAME = .venv
 
