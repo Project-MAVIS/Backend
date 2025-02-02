@@ -308,7 +308,7 @@ class ImageListView(generics.ListAPIView):
         return Image.objects.filter(user=self.request.user)
 
 
-class CalculateImageHashView(APIView):
+class CalculateImageHashView(generics.CreateAPIView):
     def post(self, request):
         """
         Calculate SHA-256 hash of an uploaded image
@@ -342,7 +342,7 @@ class CalculateImageHashView(APIView):
             )
 
 
-class SignHashView(APIView):
+class SignHashView(generics.CreateAPIView):
     def post(self, request):
         """
         Sign a hash value using user's private key
@@ -398,7 +398,7 @@ class SignHashView(APIView):
             )
 
 
-class GenerateQRView(APIView):
+class GenerateQRView(generics.CreateAPIView):
     def post(self, request):
         """
         Generate QR code from the first half of a hash value
@@ -437,7 +437,7 @@ class GenerateQRView(APIView):
             )
 
 
-class WatermarkImageView(APIView):
+class WatermarkImageView(generics.CreateAPIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request: Request):
@@ -493,7 +493,7 @@ class WatermarkImageView(APIView):
             )
 
 
-class WatermarkRecoveryView(APIView):
+class WatermarkRecoveryView(generics.CreateAPIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
