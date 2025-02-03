@@ -134,7 +134,9 @@ class ImageUploadView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        # #=======================#=======================#=======================
+        # serializer.is_valid(raise_exception=True)
+        # #=======================#=======================#=======================
 
         try:
             signature = base64.b64decode(request.data.get("signature"))
@@ -143,9 +145,7 @@ class ImageUploadView(generics.CreateAPIView):
             image_hash = hashlib.sha256(image_obj.read()).hexdigest()
             # image_hash = request.data.get('image_hash')
 
-            # #=======================#=======================#=======================
             device_name = request.data.get("device_name")
-            # #=======================#=======================#=======================
 
             if not device_name:
                 return Response(

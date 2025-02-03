@@ -13,6 +13,8 @@ from base64 import b64encode, b64decode
 import os
 import json
 import piexif
+from dotenv import load_dotenv
+load_dotenv()
 
 from cryptography.hazmat.primitives import serialization
 

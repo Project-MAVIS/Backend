@@ -21,7 +21,7 @@ class ImageSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True)
     class Meta:
         model = Image
-        fields = ('id', 'image', 'image_hash', 'signature', 'verified', 'uploaded_at', 'username')
+        fields = ('id', 'image', 'image_hash', 'verified', 'uploaded_at', 'username')
         read_only_fields = ('verified', 'uploaded_at')
     
     def create(self, validated_data):

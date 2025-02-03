@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-from apps.base.utils import initialize_server_keys
+from base.utils import initialize_server_keys
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "apps.base.apps.BaseConfig",
+    "base.apps.BaseConfig",
     "rest_framework",
 ]
 
