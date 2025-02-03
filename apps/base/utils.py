@@ -126,7 +126,7 @@ def extract_metadata(file_path):
         return None
 
 
-def initialize_server_keys():
+def initialize_server_keys() -> tuple[str, str]:
     """
     Initialize server keys from environment variables or generate new ones.
     Returns tuple of (private_key, public_key) in PEM format.

@@ -31,10 +31,9 @@ ALLOWED_HOSTS = []
 
 try:
     SERVER_PRIVATE_KEY, SERVER_PUBLIC_KEY = initialize_server_keys()
-except Exception as e:
-    print(f"Error initializing server keys: {e}")
-    SERVER_PRIVATE_KEY = None
-    SERVER_PUBLIC_KEY = None
+except ValueError as e:
+    print(e)
+    exit(1)
 
 
 # Application definition
