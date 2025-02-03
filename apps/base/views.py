@@ -30,6 +30,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 import pyqrcode
 
 # Image processing
+import numpy as np
 from PIL import Image as PILImage
 
 # Local imports
@@ -127,6 +128,7 @@ class ImageVerifyView(generics.CreateAPIView):
 
 
 class ImageUploadView(generics.CreateAPIView):
+    # Device create image hash, device sign image hash, server verifies signature and saves image
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
 
@@ -161,22 +163,28 @@ class ImageUploadView(generics.CreateAPIView):
 
             if verify_signature(device_key.public_key, signature, image_hash.encode()):
                 # Save the original image first
-                image = serializer.save(user=device_key.user, verified=False, image_hash=image_hash)
+                image = serializer.save(
+                    user=device_key.user, verified=False, image_hash=image_hash
+                )
 
                 # #=======================#=======================#=======================
-                # # Signs the unencrypted image_hash
-                # server_signed_hash = encrypt_string(image_hash, server_private_key)
-                # # Make the certificate, sign the certificate 
-                # certificate = create_certificate(image, device_key)
-                # signed_certificate = encrypt_string(certificate, server_private_key)
-                # # then in the response send the signed certficate and signed hash
-                # return Response(
-                #     {
-                #         'certificate': signed_certificate,
-                #         'signed_hash': server_signed_hash
-                #     },
-                #     status=status.HTTP_200_OK
-                # )
+                # Signs the image_hash
+                server_signed_hash = encrypt_string(
+                    image_hash, settings.SERVER_PRIVATE_KEY
+                )
+                # Make the certificate, sign the certificate
+                certificate = create_certificate(image, device_key)
+                signed_certificate = encrypt_string(
+                    certificate, settings.SERVER_PRIVATE_KEY
+                )
+                # then in the response send the signed certficate and signed hash
+                return Response(
+                    {
+                        "certificate": signed_certificate,
+                        "signed_hash": server_signed_hash,
+                    },
+                    status=status.HTTP_200_OK,
+                )
                 # #=======================#=======================#=======================
 
             return Response(
@@ -186,23 +194,24 @@ class ImageUploadView(generics.CreateAPIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class ImageLinkProvider(APIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request):
+    def post(self, request: Request):
         try:
             # # Here the server will decrypt the signed hash then get the relevant image if it exists **and is unverified** if verified these is malicious behaviour
-            # cliend_and_server_signed_certificate = request.data.get("signature")
+            # client_and_server_signed_certificate = request.data.get("signature")
             # server_signed_hash = request.data.get("signed_hash")
             # image_hash = decrypt_string(server_signed_hash, server_private_key)
             # image_object = Image.objects.get(image_hash=image_hash)
             # image_object.verified = True
 
             # # The server generates a new certificate with the photographer new certificate length, public key and the signed certificate
-            # #  ==============================================================
-            # # | length | public key length | public key | signed certificate |
-            # #  ==============================================================
+            # # =====================================================================
+            # # | length | public key length | user public key | signed certificate |
+            # # =====================================================================
             # device_name = request.data.get("device_name")
             # device_key = DeviceKeys.objects.get(name=device_name)
             # final_certificate = create_signed_certificate(
@@ -213,9 +222,70 @@ class ImageLinkProvider(APIView):
             # # The server then adds/ embeds this new certificate to the image
             # # This signed image is saved separately, the original and watermarked image is now marked verified
             # # The link is send back to the photographer to download the image or share the link
+
+            # Get signed data from request
+            signed_certificate = request.data.get("signed_certificate")
+            server_signed_hash = request.data.get("signed_hash")
+
+            # Decrypt the server signed hash to get original image hash
+            image_hash = decrypt_string(server_signed_hash, settings.SERVER_PRIVATE_KEY)
+
+            # Get the image and verify it's not already verified
+            image_object = Image.objects.get(image_hash=image_hash)
+            if image_object.verified:
+                return Response(
+                    {"error": "Image already verified"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Mark image as verified
+            image_object.verified = True
+            image_object.save()
+
+            # Get device key to create final certificate
+            device_name = request.data.get("device_name")
+            device_key = DeviceKeys.objects.get(name=device_name)
+
+            cert_data = SignedCertificateData(
+                public_key_length=len(device_key.public_key),
+                public_key=device_key.public_key,
+                signed_certificate=signed_certificate,
+            )
+
+            final_certificate = serialize_signed_certificate(cert_data)
+
+            final_cert_qr_code = pyqrcode.create(final_certificate)
+            buffer = io.BytesIO()
+            final_cert_qr_code.png(buffer, scale=8)
+            buffer.seek(0)
+
+            qr_code_array = np.array(buffer)
+            image_array = np.array(image_object.image)
+
+            # Create watermarked version with embedded certificate
+            watermarker = WaveletDCTWatermark()
+            watermarked_image = watermarker.embed_watermark(
+                original_image_array=image_array, watermark_image_array=qr_code_array
+            )
+
+            # Save watermarked version
+            watermarked_path = f"{image_object.image.path}_watermarked.jpg"
+            watermarked_image.save(watermarked_path)
+
+            # Generate download link
+            download_url = reverse("image-download", args=[image_object.id])
+
+            return Response(
+                {
+                    "message": "Image verified successfully",
+                    "download_url": download_url,
+                },
+                status=status.HTTP_200_OK,
+            )
             pass
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ImageDownloadView(APIView):
     def get(self, request, image_id):
