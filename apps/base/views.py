@@ -35,8 +35,9 @@ from PIL import Image as PILImage
 # Local imports
 from .models import DeviceKeys, Image
 from .serializers import UserSerializer, ImageSerializer
-from .utils import generate_key_pair, verify_signature
+from .utils import *
 from .watermark import WaveletDCTWatermark
+from .certificate import *
 
 
 @api_view(["GET"])
@@ -140,149 +141,49 @@ class ImageUploadView(generics.CreateAPIView):
             image_hash = hashlib.sha256(image_obj.read()).hexdigest()
             # image_hash = request.data.get('image_hash')
 
-            username = request.data.get("username")
+            # #=======================#=======================#=======================
+            device_name = request.data.get("device_name")
+            # #=======================#=======================#=======================
 
-            if not username:
+            if not device_name:
                 return Response(
-                    {"error": "Username is required"},
+                    {"error": "device name is required"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             try:
-                user = User.objects.get(username=username)
-                user_keys = DeviceKeys.objects.get(user=user)
-            except User.DoesNotExist:
-                return Response(
-                    {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
-                )
+                # user = User.objects.get(username=device_name)
+                user_keys = DeviceKeys.objects.get(name=device_name)
             except DeviceKeys.DoesNotExist:
                 return Response(
-                    {"error": "User keys not found"}, status=status.HTTP_404_NOT_FOUND
+                    {"error": "DeviceKeys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
-
-            # If Image hash is already present in the models and is verified, then there immediately send the link from here
-            # =======================# UNCOMMENT BEFORE PROD #=======================
-            # try:
-            #     prev_image = Image.objects.get(image_hash=image_hash, user= user)
-            #     print("Image already exists")
-            #     return Response({
-            #                 'message': 'Already exists.',
-            #                 'image_id': (prev_image.id + 1),
-            #                 'verified': True,
-            #                 'image_url': request.build_absolute_uri(reverse('download-image', kwargs={'image_id': prev_image.id}))
-
-            #             }, status=status.HTTP_200_OK)
-            # except Exception as e:
-            #     print(f"New image, {str(e)}")
-            # #=======================#=======================#=======================
 
             if verify_signature(user_keys.public_key, signature, image_hash.encode()):
                 # Save the original image first
-                image = serializer.save(user=user, verified=False)
+                image = serializer.save(user=user_keys.user, verified=False, image_hash=image_hash)
 
-                # Photographer clicks the image
-                # Takes and signs the image hash
-                # sends the image, the signed image hash and the device name to the server on /upload-image/
-                
-                # The server decrypts the image hash and verifies it against the image (Above function)
-                # saves the image
-                # Signs the unincrypted image_hash
-                # Make the certificate, sign the certificate 
-                # then in the response send the signed certficate and signed hash
-
-                # the photographer signs the certificate, the signed hash is unchanged 
-                # Both of these are send to the /get-image/
-                # Here the server will decrypt the signed hash then get the relevant image if it exists **and is unverified** if verified these is malicious behaviour
-                # The server generates a new certificate with the photographer new certificate length, public key and the signed certificate
-                #  ==============================================================
-                # | length | public key length | public key | signed certificate |
-                #  ==============================================================
-                # The server then adds/ embeds this new certificate to the image
-                # This signed image is saved separately, the original and watermarked image is now marked verified
-                # The link is send back to the photographer to download the image or share the link
-
-                # The verifier gets the image, 
-                # She will then deserialize the signed certificate then decrypt it to get the original certificate
-                # Non repundiation can be established by getting the photographer public key from the user id in the original certificate along
-                #  with whatever other provenance data is desired about the image
-
-                try:
-                    # Setup paths for watermarking
-                    media_root = Path(settings.MEDIA_ROOT)
-
-                    s = image_hash[: len(image_hash) // 2]
-                    url = pyqrcode.create(s)
-
-                    default_qr = f"qr_for_{username}_{datetime.now()}"
-                    url.png(f"{media_root}/qr_codes/{default_qr}.png", scale=8)
-                    watermark_path = f"{media_root}/qr_codes/{default_qr}.png"
-
-                    # Create a watermarking instance
-                    watermarker = WaveletDCTWatermark()
-
-                    # Get the path of the saved image
-                    original_image_path = image.image.path
-
-                    # Apply watermark
-                    watermarked_image = watermarker.watermark_image(
-                        original_image_path, str(watermark_path)
-                    )
-
-                    # Get the watermarked image path from the watermarker
-                    watermarked_image_path = (
-                        watermarker.result_path / "image_with_watermark.jpg"
-                    )
-                    print(f"watermarked_image_path > {watermarked_image_path}")
-
-                    if os.path.exists(watermarked_image_path):
-                        print("Image exists")
-                    else:
-                        print("Image not exist")
-
-                    # Read the watermarked image and update the model
-                    with open(watermarked_image_path, "rb") as f:
-                        print("Saving image")
-                        image_file = File(
-                            f, name="image_with_watermark.png"
-                        )  # 'name' is the filename to store
-
-                        Image.objects.create(
-                            user=user,
-                            image=image_file,
-                            image_hash=s,
-                            verified=True,
-                        )
-                        print("Image saved")
-
-                    # Clean up temporary files if needed
-                    if os.path.exists(watermarked_image_path):
-                        os.remove(watermarked_image_path)
-
-                    return Response(
-                        {
-                            "message": "Image uploaded, verified, and watermarked successfully",
-                            "image_id": (image.id + 1),
-                            "verified": True,
-                            # 'image_url': request.build_absolute_uri(f"images/{image.id}")
-                            "image_url": request.build_absolute_uri(
-                                reverse("download-image", kwargs={"image_id": image.id})
-                            ),
-                        },
-                        status=status.HTTP_201_CREATED,
-                    )
-
-                except Exception as e:
-                    return Response(
-                        {"error": f"Error during watermarking: {str(e)}"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
+                # #=======================#=======================#=======================
+                # # Signs the unencrypted image_hash
+                # server_signed_hash = encrypt_string(image_hash, server_private_key)
+                # # Make the certificate, sign the certificate 
+                # certificate = create_certificate(image, device_keys)
+                # signed_certificate = encrypt_string(certificate, server_private_key)
+                # # then in the response send the signed certficate and signed hash
+                # return Response(
+                #     {
+                #         'certificate': signed_certificate,
+                #         'signed_hash': server_signed_hash
+                #     },
+                #     status=status.HTTP_200_OK
+                # )
+                # #=======================#=======================#=======================
 
             return Response(
                 {"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         except Exception as e:
-            print("Error here")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 

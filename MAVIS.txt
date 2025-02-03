@@ -77,8 +77,39 @@ Our final product => MVP + (5) + (6.1) + whatever is PICT requirement for projec
 
 
 ===================================================================================================
+
 admin creds:
 username:
 notomkar
 password:
 omkar
+
+===================================================================================================
+
+# Photographer clicks the image
+# Takes and signs the image hash
+# sends the image, the signed image hash and the device name to the server on /upload-image/
+
+# The server decrypts the image hash and verifies it against the image (Above function)
+# saves the image
+# Signs the unincrypted image_hash
+# Make the certificate, sign the certificate 
+# then in the response send the signed certficate and signed hash
+
+# the photographer signs the certificate, the signed hash is unchanged 
+# Both of these are send to the /get-image/
+# Here the server will decrypt the signed hash then get the relevant image if it exists **and is unverified** if verified these is malicious behaviour
+# The server generates a new certificate with the photographer new certificate length, public key and the signed certificate
+#  ==============================================================
+# | length | public key length | public key | signed certificate |
+#  ==============================================================
+# The server then adds/ embeds this new certificate to the image
+# This signed image is saved separately, the original and watermarked image is now marked verified
+# The link is send back to the photographer to download the image or share the link
+
+# The verifier gets the image, 
+# She will then deserialize the signed certificate then decrypt it to get the original certificate
+# Non repundiation can be established by getting the photographer public key from the user id in the original certificate along
+#  with whatever other provenance data is desired about the image
+
+===================================================================================================
