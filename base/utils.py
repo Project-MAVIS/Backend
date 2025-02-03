@@ -129,29 +129,25 @@ def extract_metadata(file_path):
         return None
 
 
-def initialize_server_keys() -> tuple[str, str]:
+def initialize_server_keys() -> tuple[PrivateKeyTypes, PublicKeyTypes]:
     """
     Initialize server keys from environment variables or generate new ones.
     Returns tuple of (private_key, public_key) in PEM format.
     """
     # Try to get private key from environment
     private_pem = os.environ.get("SERVER_PRIVATE_KEY")
+    public_pem = os.environ.get("SERVER_PUBLIC_KEY")
 
     if private_pem:
         # Decode base64 encoded private key
         private_pem = b64decode(private_pem.encode())
+        public_pem = b64decode(public_pem.encode())
 
         # Load private key to generate public key
-        private_key = serialization.load_pem_private_key(private_pem, password=None)
+        private_key = serialization.load_pem_private_key(private_pem, password=None, backend=default_backend())
+        public_key = serialization.load_pem_public_key(public_pem, backend=default_backend())
 
-        # Generate public key from private key
-        public_key = private_key.public_key()
-        public_pem = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
-
-        return private_pem, public_pem
+        return private_key, public_key
 
     # If no private key in environment, raise an error
     raise ValueError(

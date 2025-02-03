@@ -18,19 +18,20 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 class ImageSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(write_only=True)
+    device_name = serializers.CharField(write_only=True)
     class Meta:
         model = Image
-        fields = ('id', 'image', 'image_hash', 'verified', 'uploaded_at', 'username')
+        fields = ('id', 'image', 'image_hash', 'verified', 'uploaded_at', 'device_name')
         read_only_fields = ('verified', 'uploaded_at')
     
     def create(self, validated_data):
             # Remove username from validated_data as it's not a model field
-            username = validated_data.pop('username')
+            device_name = validated_data.pop('device_name')
+            device_key = DeviceKeys.objects.get(name=device_name)
             image_file = validated_data['image']
             original_filename = image_file.name
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            new_filename = f"{username}_{timestamp}_{original_filename}"
+            new_filename = f"{device_name}_{timestamp}_{original_filename}"
             image_file.name = new_filename
             return super().create(validated_data)        
     

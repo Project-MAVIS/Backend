@@ -17,7 +17,7 @@ class DeviceKeys(models.Model):
 class Image(models.Model):
     device_key = models.ForeignKey(DeviceKeys, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='images/')
-    image_hash = models.CharField(max_length=128)
+    image_hash = models.TextField()
     uploaded_at = models.DateTimeField(auto_now_add=True)
     verified = models.BooleanField(default=False)
 

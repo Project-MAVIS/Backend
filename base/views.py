@@ -67,7 +67,7 @@ class RegisterUserView(generics.CreateAPIView):
         # Generate and save key pair
         private_key, public_key = generate_key_pair()
         DeviceKeys.objects.create(
-            user=user, private_key=private_key, public_key=public_key
+            user=user, private_key=private_key, public_key=public_key, name= user.username,
         )
 
         return Response(
@@ -133,15 +133,20 @@ class ImageUploadView(generics.CreateAPIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def create(self, request, *args, **kwargs):
+        print(1)
         serializer = self.get_serializer(data=request.data)
+        print(2)
         # #=======================#=======================#=======================
-        # serializer.is_valid(raise_exception=True)
+        serializer.is_valid(raise_exception=True)
         # #=======================#=======================#=======================
+        print(3)
 
         try:
-            signature = base64.b64decode(request.data.get("signature"))
+            print(4)
+            signature = base64.b64decode(request.data.get("image_hash"))
+            print(5)
             image_obj = serializer.validated_data["image"]
-
+            print(6)
             image_hash = hashlib.sha256(image_obj.read()).hexdigest()
             # image_hash = request.data.get('image_hash')
 
@@ -163,21 +168,28 @@ class ImageUploadView(generics.CreateAPIView):
 
             if verify_signature(device_key.public_key, signature, image_hash.encode()):
                 # Save the original image first
+                print(99)
                 image = serializer.save(
-                    user=device_key.user, verified=False, image_hash=image_hash
+                    device_key=device_key, verified=False, image_hash=image_hash
                 )
+                print(100)
 
                 # #=======================#=======================#=======================
                 # Signs the image_hash
+                print(type(settings.SERVER_PRIVATE_KEY))
+                
                 server_signed_hash = encrypt_string(
                     image_hash, settings.SERVER_PRIVATE_KEY
                 )
+                print(101)
                 # Make the certificate, sign the certificate
                 certificate = create_certificate(image, device_key)
+                print(102)
                 signed_certificate = encrypt_string(
                     certificate, settings.SERVER_PRIVATE_KEY
                 )
                 # then in the response send the signed certficate and signed hash
+
                 return Response(
                     {
                         "certificate": signed_certificate,
@@ -192,6 +204,7 @@ class ImageUploadView(generics.CreateAPIView):
             )
 
         except Exception as e:
+            print(-1)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
