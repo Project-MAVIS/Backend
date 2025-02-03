@@ -153,21 +153,21 @@ class ImageUploadView(generics.CreateAPIView):
 
             try:
                 # user = User.objects.get(username=device_name)
-                user_keys = DeviceKeys.objects.get(name=device_name)
+                device_key = DeviceKeys.objects.get(name=device_name)
             except DeviceKeys.DoesNotExist:
                 return Response(
                     {"error": "DeviceKeys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            if verify_signature(user_keys.public_key, signature, image_hash.encode()):
+            if verify_signature(device_key.public_key, signature, image_hash.encode()):
                 # Save the original image first
-                image = serializer.save(user=user_keys.user, verified=False, image_hash=image_hash)
+                image = serializer.save(user=device_key.user, verified=False, image_hash=image_hash)
 
                 # #=======================#=======================#=======================
                 # # Signs the unencrypted image_hash
                 # server_signed_hash = encrypt_string(image_hash, server_private_key)
                 # # Make the certificate, sign the certificate 
-                # certificate = create_certificate(image, device_keys)
+                # certificate = create_certificate(image, device_key)
                 # signed_certificate = encrypt_string(certificate, server_private_key)
                 # # then in the response send the signed certficate and signed hash
                 # return Response(
@@ -186,6 +186,36 @@ class ImageUploadView(generics.CreateAPIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+class ImageLinkProvider(APIView):
+    serializer_class = ImageSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        try:
+            # # Here the server will decrypt the signed hash then get the relevant image if it exists **and is unverified** if verified these is malicious behaviour
+            # cliend_and_server_signed_certificate = request.data.get("signature")
+            # server_signed_hash = request.data.get("signed_hash")
+            # image_hash = decrypt_string(server_signed_hash, server_private_key)
+            # image_object = Image.objects.get(image_hash=image_hash)
+            # image_object.verified = True
+
+            # # The server generates a new certificate with the photographer new certificate length, public key and the signed certificate
+            # #  ==============================================================
+            # # | length | public key length | public key | signed certificate |
+            # #  ==============================================================
+            # device_name = request.data.get("device_name")
+            # device_key = DeviceKeys.objects.get(name=device_name)
+            # final_certificate = create_signed_certificate(
+            #     device_key.public_key,
+            #     signed_certificate=cliend_and_server_signed_certificate
+            # )
+
+            # # The server then adds/ embeds this new certificate to the image
+            # # This signed image is saved separately, the original and watermarked image is now marked verified
+            # # The link is send back to the photographer to download the image or share the link
+            pass
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class ImageDownloadView(APIView):
     def get(self, request, image_id):
