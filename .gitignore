@@ -46,6 +46,9 @@ coverage.xml
 # VirtualEnv
 .venv/
 
+*.env
+.keys
+
 # Developers
 *.sw*
 manage.py
