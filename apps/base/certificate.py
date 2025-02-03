@@ -152,8 +152,59 @@ def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
     
     return certificate, device_name_end
 
+@dataclass
+class SignedCertificateData:
+    public_key_length: int     # Length of the public key in bytes
+    public_key: bytes          # The actual public key
+    signed_certificate: bytes   # The previously created certificate
+
+def serialize_signed_certificate(data: SignedCertificateData) -> bytes:
+    """Serialize the signed certificate data into bytes."""
+    # Validate public key length matches actual public key
+    if len(data.public_key) != data.public_key_length:
+        raise ValueError("Public key length doesn't match actual public key size")
+    
+    # Pack everything except the total length first
+    certificate_content = struct.pack(
+        '=I',  # public_key_length as 32-bit unsigned int
+        data.public_key_length
+    )
+    # Add the variable length fields
+    certificate_content += data.public_key + data.signed_certificate
+    
+    # Calculate total length
+    total_length = len(certificate_content)
+    
+    # Pack the length followed by the content
+    full_certificate = struct.pack('=B', total_length) + certificate_content
+    
+    return full_certificate
+
+def deserialize_signed_certificate(data: bytes) -> Tuple[int, SignedCertificateData]:
+    """Deserialize bytes into signed certificate data."""
+    # First byte is the total length
+    total_length = struct.unpack('=B', data[0:1])[0]
+    
+    # Next 4 bytes are the public key length
+    public_key_length = struct.unpack('=I', data[1:5])[0]
+    
+    # Extract public key based on its length
+    public_key = data[5:5+public_key_length]
+    
+    # Rest is the signed certificate
+    signed_certificate = data[5+public_key_length:]
+    
+    cert_data = SignedCertificateData(
+        public_key_length=public_key_length,
+        public_key=public_key,
+        signed_certificate=signed_certificate
+    )
+    
+    return total_length, cert_data
+
+
 # Example usage
-def example_usage():
+def example_certificate_usage():
     timestamp=0x123456789ABCDEF0
     image_id=0xFEDCBA9876543210
     user_id=0x12345678
@@ -183,8 +234,38 @@ def example_usage():
     return cert, deserialized_cert, serialized_data
 
 
-original, deserialized, binary_data = example_usage()
-print(f"Original: {original}")
-print(f"Deserialized: {deserialized}")
-print(f"Binary length: {len(binary_data)} bytes")
-print(f"Data matches: {original == deserialized}")
+# original, deserialized, binary_data = example_certificate_usage()
+# print(f"Original: {original}")
+# print(f"Deserialized: {deserialized}")
+# print(f"Binary length: {len(binary_data)} bytes")
+# print(f"Data matches: {original == deserialized}")
+
+
+def example_signed_certificate_usage():
+    # Create sample data
+    sample_public_key = b'SamplePublicKey123'  # Just an example
+    sample_signed_cert = b'PreviousCertificate' # Just an example
+    
+    sample_data = SignedCertificateData(
+        public_key_length=len(sample_public_key),
+        public_key=sample_public_key,
+        signed_certificate=sample_signed_cert
+    )
+    
+    # Serialize
+    binary_data = serialize_signed_certificate(sample_data)
+    
+    # Print as hex
+    print("Serialized data (hex):")
+    print(binary_data.hex())
+    print(f"Total length: {len(binary_data)} bytes")
+    
+    # Deserialize
+    total_length, recovered_data = deserialize_signed_certificate(binary_data)
+    print("\nDeserialized data:")
+    print(f"Total Length: {total_length} bytes")
+    print(f"Public Key Length: {recovered_data.public_key_length}")
+    print(f"Public Key: {recovered_data.public_key}")
+    print(f"Signed Certificate: {recovered_data.signed_certificate}")
+
+example_signed_certificate_usage()
