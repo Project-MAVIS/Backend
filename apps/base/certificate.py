@@ -165,7 +165,7 @@ class SignedCertificateData:
     signed_certificate: bytes  # The previously created certificate
 
 
-def serialize_signed_certificate(data: SignedCertificateData) -> bytes:
+def serialize_signed_certificate(data: SignedCertificateData) -> str:
     """Serialize the signed certificate data into bytes."""
     # Validate public key length matches actual public key
     if len(data.public_key) != data.public_key_length:
@@ -184,11 +184,12 @@ def serialize_signed_certificate(data: SignedCertificateData) -> bytes:
     # Pack the length followed by the content
     full_certificate = struct.pack("=B", total_length) + certificate_content
 
-    return full_certificate
+    return full_certificate.hex()
 
 
-def deserialize_signed_certificate(data: bytes) -> Tuple[int, SignedCertificateData]:
+def deserialize_signed_certificate(data: str) -> Tuple[int, SignedCertificateData]:
     """Deserialize bytes into signed certificate data."""
+    data = str.encode(data)
     # First byte is the total length
     total_length = struct.unpack("=B", data[0:1])[0]
 

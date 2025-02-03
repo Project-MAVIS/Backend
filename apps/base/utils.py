@@ -6,6 +6,7 @@ from cryptography.hazmat.primitives.asymmetric.types import (
     PrivateKeyTypes,
 )
 import base64
+import hashlib
 from cv2.typing import MatLike
 from PIL import Image
 from base64 import b64encode, b64decode
@@ -155,6 +156,26 @@ def initialize_server_keys() -> tuple[str, str]:
         "No private key found in environment variables.\n Generate key pair with the following command:\n\nsh scripts/keys.sh"
     )
 
+def calculate_image_hash(image: Image):
+    """
+    Calculate SHA-256 hash of a PIL Image object.
+    
+    Args:
+        image: PIL Image object
+        
+    Returns:
+        str: SHA-256 hash string
+    """
+    import hashlib
+    import io
+    
+    # Convert image to bytes
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format=image.format or 'PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+    
+    # Calculate and return SHA-256 hash
+    return hashlib.sha256(img_byte_arr).hexdigest()
 
 # metadata = {
 #     "Author": "Omkar",

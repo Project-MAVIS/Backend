@@ -254,23 +254,33 @@ class ImageLinkProvider(APIView):
 
             final_certificate = serialize_signed_certificate(cert_data)
 
+            print(f"final_certificate: {final_certificate}")
+            print(len(final_certificate))
+
             final_cert_qr_code = pyqrcode.create(final_certificate)
             buffer = io.BytesIO()
             final_cert_qr_code.png(buffer, scale=8)
-            buffer.seek(0)
-
-            qr_code_array = np.array(buffer)
-            image_array = np.array(image_object.image)
+            buffer.seek(0)            
 
             # Create watermarked version with embedded certificate
             watermarker = WaveletDCTWatermark()
-            watermarked_image = watermarker.embed_watermark(
-                original_image_array=image_array, watermark_image_array=qr_code_array
+            watermarked_image = PILImage.open(
+                watermarker.fwatermark_image(
+                    original_image= PILImage.open(image_object.image),
+                    watermark= PILImage.open(buffer)
+                )
             )
 
             # Save watermarked version
             watermarked_path = f"{image_object.image.path}_watermarked.jpg"
-            watermarked_image.save(watermarked_path)
+            # watermarked_image.save(watermarked_path)
+
+            Image.objects.create(
+                device_key = device_key,
+                image = watermarked_image,
+                image_hash = calculate_image_hash(watermarked_image),
+                verified = True
+            )
 
             # Generate download link
             download_url = reverse("image-download", args=[image_object.id])

@@ -33,7 +33,7 @@ try:
     SERVER_PRIVATE_KEY, SERVER_PUBLIC_KEY = initialize_server_keys()
 except ValueError as e:
     print(e)
-    exit(1)
+    # exit(1)
 
 
 # Application definition
