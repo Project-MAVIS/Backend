@@ -186,24 +186,26 @@ class WaveletDCTWatermark:
             print(f"Error processing coefficients: {str(e)}")
             raise
 
-    def embed_watermark(self, watermark_array, orig_image):
+    def embed_watermark(
+        self, original_image_array: np.ndarray, watermark_image_array: np.ndarray
+    ):
         """Embed watermark in DCT coefficients with enhanced strength"""
         try:
-            watermark_flat = watermark_array.ravel()
+            watermark_flat = watermark_image_array.ravel()
             ind = 0
 
-            for x in range(0, orig_image.shape[0], 8):
-                for y in range(0, orig_image.shape[1], 8):
+            for x in range(0, original_image_array.shape[0], 8):
+                for y in range(0, original_image_array.shape[1], 8):
                     if ind < len(watermark_flat):
-                        subdct = orig_image[x : x + 8, y : y + 8].copy()
+                        subdct = original_image_array[x : x + 8, y : y + 8].copy()
                         # Embed in multiple coefficients for redundancy
                         subdct[4][4] = watermark_flat[ind] * self.alpha
                         subdct[5][5] = watermark_flat[ind] * self.alpha
                         subdct[6][6] = watermark_flat[ind] * self.alpha
-                        orig_image[x : x + 8, y : y + 8] = subdct
+                        original_image_array[x : x + 8, y : y + 8] = subdct
                         ind += 1
 
-            return orig_image
+            return original_image_array
         except Exception as e:
             print(f"Error embedding watermark: {str(e)}")
             raise
@@ -355,7 +357,7 @@ class WaveletDCTWatermark:
             print(f"Error in watermarking process: {str(e)}")
             raise
 
-    def fwatermark_image(self, original_image, watermark):
+    def fwatermark_image(self, original_image: Image.Image, watermark: Image.Image):
         """Watermark image received directly from view, returning the watermarked image array.
 
         Similar to watermark_image() but takes PIL Image objects directly instead of file paths
@@ -502,12 +504,8 @@ class WaveletDCTWatermark:
             results = []
             for qr in qr_codes:
                 # Convert bytes to string
-                data = qr.data.decode('utf-8')
-                results.append({
-                    'data': data,
-                    'type': qr.type,
-                    'position': qr.rect
-                })
+                data = qr.data.decode("utf-8")
+                results.append({"data": data, "type": qr.type, "position": qr.rect})
 
             return results
 
