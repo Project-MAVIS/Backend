@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from apps.base.utils import initialize_server_keys
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +28,13 @@ SECRET_KEY = "django-insecure-9o8plk=l!k(7ytpb)6pm@30f(!9pu0*26_b$4imq$v#!$de#$#
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+try:
+    SERVER_PRIVATE_KEY, SERVER_PUBLIC_KEY = initialize_server_keys()
+except Exception as e:
+    print(f"Error initializing server keys: {e}")
+    SERVER_PRIVATE_KEY = None
+    SERVER_PUBLIC_KEY = None
 
 
 # Application definition

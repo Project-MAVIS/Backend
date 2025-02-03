@@ -8,52 +8,51 @@ from cryptography.hazmat.primitives.asymmetric.types import (
 import base64
 from cv2.typing import MatLike
 from PIL import Image
-
+from base64 import b64encode, b64decode
+import os
 import json
 import piexif
 
 from cryptography.hazmat.primitives import serialization
 
+
 def generate_key_pair():
     private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend()
+        public_exponent=65537, key_size=2048, backend=default_backend()
     )
-    
+
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
-    
+
     public_pem = private_key.public_key().public_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
-    
+
     return private_pem.decode(), public_pem.decode()
+
 
 def verify_signature(public_key_pem, signature, data):
     try:
         public_key = serialization.load_pem_public_key(
-            public_key_pem.encode(),
-            backend=default_backend()
+            public_key_pem.encode(), backend=default_backend()
         )
-        
+
         public_key.verify(
             signature,
             data,
             padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH
+                mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH
             ),
-            hashes.SHA256()
+            hashes.SHA256(),
         )
         return True
     except:
         return False
-    
+
 
 def encrypt_string(plain_text: str, public_key: PublicKeyTypes) -> str:
     """Encrypts a given string using the RSA public key."""
@@ -86,7 +85,6 @@ def decrypt_string(encrypted_text: str, private_key: PrivateKeyTypes) -> str:
         ),
     )
     return decrypted_bytes.decode("utf-8")
-
 
 
 def add_complex_metadata(file_path, metadata_dict):
@@ -126,6 +124,36 @@ def extract_metadata(file_path):
     else:
         print("No custom metadata found.")
         return None
+
+
+def initialize_server_keys():
+    """
+    Initialize server keys from environment variables or generate new ones.
+    Returns tuple of (private_key, public_key) in PEM format.
+    """
+    # Try to get private key from environment
+    private_pem = os.environ.get("SERVER_PRIVATE_KEY")
+
+    if private_pem:
+        # Decode base64 encoded private key
+        private_pem = b64decode(private_pem.encode())
+
+        # Load private key to generate public key
+        private_key = serialization.load_pem_private_key(private_pem, password=None)
+
+        # Generate public key from private key
+        public_key = private_key.public_key()
+        public_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+
+        return private_pem, public_pem
+
+    # If no private key in environment, raise an error
+    raise ValueError(
+        "No private key found in environment variables.\n Generate key pair with the following command:\n\nsh scripts/keys.sh"
+    )
 
 
 # metadata = {
