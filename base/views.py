@@ -25,6 +25,7 @@ from rest_framework.request import Request
 # Cryptography
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.fernet import Fernet
 
 # QR Code related
 import pyqrcode
@@ -67,7 +68,10 @@ class RegisterUserView(generics.CreateAPIView):
         # Generate and save key pair
         private_key, public_key = generate_key_pair()
         DeviceKeys.objects.create(
-            user=user, private_key=private_key, public_key=public_key, name= user.username,
+            user=user,
+            private_key=private_key,
+            public_key=public_key,
+            name=user.username,
         )
 
         return Response(
@@ -132,15 +136,15 @@ class ImageUploadView(generics.CreateAPIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def create(self, request, *args, **kwargs):    
-        serializer = self.get_serializer(data=request.data)    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
         # #=======================#=======================#=======================
         serializer.is_valid(raise_exception=True)
-        # #=======================#=======================#=======================    
+        # #=======================#=======================#=======================
 
-        try:        
-            signature = base64.b64decode(request.data.get("image_hash"))        
-            image_obj = serializer.validated_data["image"]        
+        try:
+            signature = base64.b64decode(request.data.get("image_hash"))
+            image_obj = serializer.validated_data["image"]
             image_hash = hashlib.sha256(image_obj.read()).hexdigest()
             # image_hash = request.data.get('image_hash')
 
@@ -162,13 +166,13 @@ class ImageUploadView(generics.CreateAPIView):
 
             if verify_signature(device_key.public_key, signature, image_hash.encode()):
                 # Save the original image first
-                
+
                 image = serializer.save(
                     device_key=device_key, verified=False, image_hash=image_hash
                 )
-                
+
                 # Signs the image_hash
-                
+
                 server_signed_hash = encrypt_string(
                     image_hash, settings.SERVER_PUBLIC_KEY
                 )
@@ -224,7 +228,7 @@ class ImageLinkProvider(APIView):
             # # The link is send back to the photographer to download the image or share the link
 
             # Get signed data from request
-            signed_certificate = request.data.get("signed_certificate")
+            hybrid_signed_cert_and_key = request.data.get("signed_certificate_and_key")
             server_signed_hash = request.data.get("signed_hash")
 
             # Decrypt the server signed hash to get original image hash
@@ -246,40 +250,57 @@ class ImageLinkProvider(APIView):
             device_name = request.data.get("device_name")
             device_key = DeviceKeys.objects.get(name=device_name)
 
+            # Decrypt the hybrid-encrypted certificate
+            combined = base64.b64decode(hybrid_signed_cert_and_key)
+            # The first 256 bytes will be the RSA-encrypted AES key
+            encrypted_aes_key = combined[:256]  # For 2048-bit RSA key
+            encrypted_data = combined[256:]
+
+            # Decrypt the AES key using RSA private key
+            aes_key = settings.SERVER_PRIVATE_KEY.decrypt(
+                encrypted_aes_key,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None,
+                ),
+            )
+
+            # Create Fernet instance with decrypted key
+            f = Fernet(aes_key)
+
+            # Decrypt the actual certificate data
+            dec_signed_cert = f.decrypt(encrypted_data).decode("utf-8")
+
             cert_data = SignedCertificateData(
                 public_key_length=len(device_key.public_key),
                 public_key=device_key.public_key,
-                signed_certificate=signed_certificate,
+                signed_certificate=dec_signed_cert,
             )
 
             final_certificate = serialize_signed_certificate(cert_data)
 
-            print(f"final_certificate: {final_certificate}")
-            print(len(final_certificate))
-
+            # Rest of your existing code...
             final_cert_qr_code = pyqrcode.create(final_certificate)
             buffer = io.BytesIO()
             final_cert_qr_code.png(buffer, scale=8)
-            buffer.seek(0)            
+            buffer.seek(0)
 
             # Create watermarked version with embedded certificate
             watermarker = WaveletDCTWatermark()
             watermarked_image = PILImage.open(
                 watermarker.fwatermark_image(
-                    original_image= PILImage.open(image_object.image),
-                    watermark= PILImage.open(buffer)
+                    original_image=PILImage.open(image_object.image),
+                    watermark=PILImage.open(buffer),
                 )
             )
 
             # Save watermarked version
-            watermarked_path = f"{image_object.image.path}_watermarked.jpg"
-            # watermarked_image.save(watermarked_path)
-
             Image.objects.create(
-                device_key = device_key,
-                image = watermarked_image,
-                image_hash = calculate_image_hash(watermarked_image),
-                verified = True
+                device_key=device_key,
+                image=watermarked_image,
+                image_hash=calculate_image_hash(watermarked_image),
+                verified=True,
             )
 
             # Generate download link
@@ -292,7 +313,7 @@ class ImageLinkProvider(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        
+
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
