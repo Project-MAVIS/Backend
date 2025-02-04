@@ -167,34 +167,61 @@ class ImageUploadView(generics.CreateAPIView):
             if verify_signature(device_key.public_key, signature, image_hash.encode()):
                 # Save the original image first
 
-                image = serializer.save(
-                    device_key=device_key, verified=False, image_hash=image_hash
+                image_object = serializer.save(
+                    device_key=device_key, 
+                    verified=False, 
+                    image_hash=image_hash
                 )
 
-                # Signs the image_hash
+                # # Signs the image_hash
+                # server_signed_hash = encrypt_string(
+                #     image_hash, settings.SERVER_PUBLIC_KEY
+                # )
 
-                server_signed_hash = encrypt_string(
-                    image_hash, settings.SERVER_PUBLIC_KEY
-                )
                 # Make the certificate, sign the certificate
-                certificate = create_certificate(image, device_key)
+                certificate = create_certificate(image_object, device_key)
                 signed_certificate = encrypt_string(
                     certificate, settings.SERVER_PUBLIC_KEY
                 )
                 # then in the response send the signed certficate and signed hash
 
+                final_cert_qr_code = pyqrcode.create(signed_certificate)
+                buffer = io.BytesIO()
+                final_cert_qr_code.png(buffer, scale=8)
+                buffer.seek(0)
+
+                # Create watermarked version with embedded certificate
+                watermarker = WaveletDCTWatermark()
+                watermarked_image = PILImage.open(
+                    watermarker.fwatermark_image(
+                        original_image=image_object.image,
+                        watermark=PILImage.open(buffer),
+                    )
+                )
+
+                # Save watermarked version
+                Image.objects.create(
+                    device_key=device_key,
+                    image=watermarked_image,
+                    image_hash=calculate_image_hash(watermarked_image),
+                    original_image_hash = image_hash,
+                    verified=True,
+                )
+
+                # Generate download link
+                download_url = reverse("image-download", args=[image_object.id])
+
                 return Response(
                     {
-                        "certificate": signed_certificate,
-                        "signed_hash": server_signed_hash,
+                        "message": "Image verified successfully",
+                        "download_url": download_url,
                     },
                     status=status.HTTP_200_OK,
                 )
-
             return Response(
                 {"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST
             )
-
+        
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
