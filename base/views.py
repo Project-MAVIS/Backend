@@ -194,7 +194,7 @@ class ImageUploadView(generics.CreateAPIView):
                 watermarker = WaveletDCTWatermark()
                 watermarked_image = PILImage.open(
                     watermarker.fwatermark_image(
-                        original_image=image_object.image,
+                        original_image=PILImage.open(image_object.image.read()),
                         watermark=PILImage.open(buffer),
                     )
                 )

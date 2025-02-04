@@ -30,3 +30,65 @@
 [2025-02-04 18:32:46] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 59
 [2025-02-04 18:32:52] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
 [2025-02-04 18:32:53] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:35:06] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-04 18:35:07] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:35:13] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-04 18:35:14] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:35:21] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 18:35:21] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 56
+[2025-02-04 18:36:14] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:16] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:36:20] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:21] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:36:24] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:25] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:36:28] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:29] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:36:31] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:32] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:36:36] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:37] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:36:43] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 18:36:43] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 56
+[2025-02-04 18:36:51] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:51] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:36:55] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:56] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:36:58] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:36:58] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:37:00] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:37:01] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:37:21] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 18:37:21] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 56
+[2025-02-04 18:38:16] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:38:16] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:38:24] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:38:25] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:38:28] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:38:30] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:38:36] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 18:38:36] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 56
+[2025-02-04 18:38:45] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:38:46] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:39:13] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:39:14] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:39:21] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:39:22] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:39:32] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:39:33] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:39:36] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:39:37] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:39:44] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 18:39:44] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 56
+[2025-02-04 18:40:06] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:40:07] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:40:09] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/watermark.py changed, reloading.
+[2025-02-04 18:40:10] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:42:58] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-04 18:42:58] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:43:05] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 18:43:05] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 50
+[2025-02-04 18:43:15] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-04 18:43:16] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 18:43:19] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 18:43:19] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 50

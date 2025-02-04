@@ -94,14 +94,12 @@ class WaveletDCTWatermark:
         try:
             # Convert to RGBA first
             img = image.convert("RGBA")
-
             # Handle alpha channel for PNG
             if img.mode == "RGBA":
                 # Create white background
                 background = Image.new("RGBA", img.size, (255, 255, 255, 255))
                 # Composite the image onto the background
                 img = Image.alpha_composite(background, img)
-
             # Convert to RGB for processing
             img = img.convert("RGB")
             img = img.resize((size, size), Image.Resampling.LANCZOS)
@@ -378,7 +376,6 @@ class WaveletDCTWatermark:
         try:
             model = "haar"
             level = 1
-
             image_array = self.fconvert_image(original_image, 2048, to_grayscale=False)
             watermark_array = self.fconvert_image(watermark, 128, to_grayscale=True)
 
@@ -395,7 +392,6 @@ class WaveletDCTWatermark:
                 watermarked_image[:, :, channel] = pywt.waverec2(
                     coeffs_image[channel], model
                 )
-
             image_array_copy = watermarked_image.clip(0, 255)
             image_array_copy = image_array_copy.astype("uint8")
             return image_array_copy
