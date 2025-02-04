@@ -1,0 +1,39 @@
+[2025-02-04 16:33:36] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:38:17] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:38:26] WARNING django.request: Not Found: /
+[2025-02-04 16:38:26] WARNING django.server: "GET / HTTP/1.1" 404 2305
+[2025-02-04 16:38:26] WARNING django.request: Not Found: /favicon.ico
+[2025-02-04 16:38:26] WARNING django.server: "GET /favicon.ico HTTP/1.1" 404 2356
+[2025-02-04 16:38:30] WARNING django.request: Not Found: /api/
+[2025-02-04 16:38:30] WARNING django.server: "GET /api/ HTTP/1.1" 404 6011
+[2025-02-04 16:38:47] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 16:38:47] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 98
+[2025-02-04 16:41:49] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/utils.py changed, reloading.
+[2025-02-04 16:41:50] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:43:27] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/utils.py changed, reloading.
+[2025-02-04 16:43:28] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:44:52] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 16:44:52] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 84
+[2025-02-04 16:45:17] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/utils.py changed, reloading.
+[2025-02-04 16:45:18] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:47:20] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/utils.py changed, reloading.
+[2025-02-04 16:47:21] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:47:25] WARNING django.request: Bad Request: /api/upload-image/
+[2025-02-04 16:47:25] WARNING django.server: "POST /api/upload-image/ HTTP/1.1" 400 98
+[2025-02-04 16:48:21] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-04 16:48:22] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:48:25] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/utils.py changed, reloading.
+[2025-02-04 16:48:26] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:48:32] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/utils.py changed, reloading.
+[2025-02-04 16:48:32] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 16:48:38] INFO django.server: "POST /api/upload-image/ HTTP/1.1" 200 723
+[2025-02-04 17:00:12] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-04 17:00:14] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 17:01:05] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/utils.py changed, reloading.
+[2025-02-04 17:01:06] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 17:01:15] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-04 17:01:16] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 17:07:04] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-04 17:07:07] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-04 17:07:33] INFO django.server: "POST /api/upload-image/ HTTP/1.1" 200 723
+[2025-02-04 17:13:28] INFO django.server: "POST /api/upload-image/ HTTP/1.1" 200 723

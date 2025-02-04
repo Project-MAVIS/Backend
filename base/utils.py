@@ -38,7 +38,7 @@ def generate_key_pair():
     return private_pem.decode(), public_pem.decode()
 
 
-def verify_signature(public_key_pem, signature, data):
+def verify_signature(public_key_pem: PublicKeyTypes, signature, data):
     try:
         public_key = serialization.load_pem_public_key(
             public_key_pem.encode(), backend=default_backend()
@@ -57,11 +57,11 @@ def verify_signature(public_key_pem, signature, data):
         return False
 
 
-def encrypt_string(plain_text: str, public_key: PublicKeyTypes) -> str:
+def encrypt_string(plain_text: str, public_key: rsa.RSAPublicKey) -> str:
     """Encrypts a given string using the RSA public key."""
     plain_text_bytes = plain_text.encode("utf-8")
-
-    # Encrypt the bytes
+    
+    # Encrypt the bytes using the public key
     encrypted_bytes = public_key.encrypt(
         plain_text_bytes,
         padding.OAEP(
