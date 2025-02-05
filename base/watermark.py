@@ -6,8 +6,7 @@ from PIL import Image
 from scipy.fftpack import dct, idct
 from pathlib import Path
 
-import cv2
-
+# import cv2
 # from pyzbar.pyzbar import decode
 
 logger = logging.getLogger("server_log")
@@ -171,70 +170,42 @@ class WaveletDCTWatermark:
 
         return threshold
 
-    # def process_coefficients(self, image_array, model, level):
-    #     """Process wavelet coefficients for each color channel if RGB"""
-    #     try:
-    #         if len(image_array.shape) == 3:  # RGB image
-    #             coeffs_by_channel = []
-    #             for channel in range(3):
-    #                 coeffs = pywt.wavedec2(
-    #                     data=image_array[:, :, channel], wavelet=model, level=level
-    #                 )
-    #                 coeffs_by_channel.append(list(coeffs))
-    #             return coeffs_by_channel
-    #         else:  # Grayscale image
-    #             coeffs = pywt.wavedec2(data=image_array, wavelet=model, level=level)
-    #             return list(coeffs)
-    #     except Exception as e:
-    #         logger.info(f"Error processing coefficients: {str(e)}")
-    #         raise
-
     def process_coefficients(self, image_array, model, level):
         """Process wavelet coefficients for each color channel if RGB"""
         try:
             if len(image_array.shape) == 3:  # RGB image
                 coeffs_by_channel = []
                 for channel in range(3):
-                    # Get wavelet coefficients and convert to list immediately
-                    coeffs = list(pywt.wavedec2(
-                        data=image_array[:, :, channel],
-                        wavelet=model,
-                        level=level
-                    ))
-                    coeffs_by_channel.append(coeffs)
+                    coeffs = pywt.wavedec2(
+                        data=image_array[:, :, channel], wavelet=model, level=level
+                    )
+                    coeffs_by_channel.append(list(coeffs))
                 return coeffs_by_channel
             else:  # Grayscale image
-                coeffs = list(pywt.wavedec2(
-                    data=image_array,
-                    wavelet=model,
-                    level=level
-                ))
-                return coeffs
+                coeffs = pywt.wavedec2(data=image_array, wavelet=model, level=level)
+                return list(coeffs)
         except Exception as e:
-            logger.info(f"Error in process_coefficients: {str(e)}")
+            logger.info(f"Error processing coefficients: {str(e)}")
             raise
 
-
-    def embed_watermark(
-        self, original_image_array: np.ndarray, watermark_image_array: np.ndarray
-    ):
+    def embed_watermark(self, watermark_array, orig_image):
         """Embed watermark in DCT coefficients with enhanced strength"""
         try:
-            watermark_flat = watermark_image_array.ravel()
+            watermark_flat = watermark_array.ravel()
             ind = 0
 
-            for x in range(0, original_image_array.shape[0], 8):
-                for y in range(0, original_image_array.shape[1], 8):
+            for x in range(0, orig_image.shape[0], 8):
+                for y in range(0, orig_image.shape[1], 8):
                     if ind < len(watermark_flat):
-                        subdct = original_image_array[x : x + 8, y : y + 8].copy()
+                        subdct = orig_image[x : x + 8, y : y + 8].copy()
                         # Embed in multiple coefficients for redundancy
                         subdct[4][4] = watermark_flat[ind] * self.alpha
                         subdct[5][5] = watermark_flat[ind] * self.alpha
                         subdct[6][6] = watermark_flat[ind] * self.alpha
-                        original_image_array[x : x + 8, y : y + 8] = subdct
+                        orig_image[x : x + 8, y : y + 8] = subdct
                         ind += 1
 
-            return original_image_array
+            return orig_image
         except Exception as e:
             logger.info(f"Error embedding watermark: {str(e)}")
             raise
@@ -386,56 +357,49 @@ class WaveletDCTWatermark:
             logger.info(f"Error in watermarking process: {str(e)}")
             raise
 
-    
-    def fwatermark_image(self, original_image: Image.Image, watermark: Image.Image):
-        """Watermark image received directly from view, returning the watermarked image array."""
+    def fwatermark_image(self, original_image, watermark):
+        """Watermark image received directly from view, returning the watermarked image array.
+
+        Similar to watermark_image() but takes PIL Image objects directly instead of file paths
+        and returns the watermarked image array without saving to disk - useful for API endpoints.
+
+        Args:
+            original_image (PIL.Image.Image): PIL Image object of the original image
+            watermark (PIL.Image.Image): PIL Image object of the watermark
+
+        Returns:
+            numpy.ndarray: The watermarked image array as uint8 type, ready for conversion to PIL Image
+
+        Raises:
+            Exception: If there is an error during the watermarking process.
+            The specific error message is printed before re-raising.
+        """
         try:
             model = "haar"
             level = 1
-            
-            logger.info("Converting images...")
+
             image_array = self.fconvert_image(original_image, 2048, to_grayscale=False)
             watermark_array = self.fconvert_image(watermark, 128, to_grayscale=True)
 
-            logger.info("Processing and embedding watermark...")
             coeffs_image = self.process_coefficients(image_array, model, level)
-            logger.info("Done")
 
             # Handle each color channel separately
             watermarked_image = np.empty_like(image_array)
             for channel in range(3):
-                logger.info(f"Working on channel: {channel}")
-                # Create a copy of coefficients to avoid modifying original
-                channel_coeffs = [coeff.copy() if isinstance(coeff, np.ndarray) 
-                                else [c.copy() for c in coeff] 
-                                for coeff in coeffs_image[channel]]
-                
-                # Apply DCT to approximation coefficients
-                dct_array = self.apply_dct(channel_coeffs[0])
-                                
+                dct_array = self.apply_dct(coeffs_image[channel][0])
                 # Embed watermark in both green and blue channels for redundancy
                 if channel in [1, 2]:  # Green and Blue channels
-                    logger.info("Blue green channel")
                     dct_array = self.embed_watermark(watermark_array, dct_array)
-                    logger.info("Blue green complete")
-                
-                logger.info(1)
-                channel_coeffs[0] = self.inverse_dct(dct_array)
-                logger.info(2)
-                
-                # Reconstruct the channel using modified coefficients
+                coeffs_image[channel][0] = self.inverse_dct(dct_array)
                 watermarked_image[:, :, channel] = pywt.waverec2(
-                    channel_coeffs, model
+                    coeffs_image[channel], model
                 )
-                logger.info(3)
 
-            logger.info("Finalizing image...")
             image_array_copy = watermarked_image.clip(0, 255)
             image_array_copy = image_array_copy.astype("uint8")
             return image_array_copy
-
         except Exception as e:
-            logger.info(f"Error in watermarking process: {str(e)}")
+            print(f"Error in watermarking process: {str(e)}")
             raise
 
     def recover_watermark(self, image_path, model="haar", level=1):
@@ -452,7 +416,7 @@ class WaveletDCTWatermark:
 
         Raises:
             Exception: If there is an error during the watermark recovery process.
-            The specific error message is logger.infoed before re-raising.
+            The specific error message is printed before re-raising.
         """
         try:
             image_array = self.convert_image(image_path, 2048, to_grayscale=False)
@@ -475,7 +439,7 @@ class WaveletDCTWatermark:
             img = Image.fromarray(watermark_array)
             img.save(self.result_path / "recovered_watermark.jpg")
         except Exception as e:
-            logger.info(f"Error recovering watermark: {str(e)}")
+            print(f"Error recovering watermark: {str(e)}")
             raise
 
     def frecover_watermark(self, image: Image.Image, model="haar", level=1):
@@ -495,7 +459,7 @@ class WaveletDCTWatermark:
 
         Raises:
             Exception: If there is an error during the watermark recovery process.
-            The specific error message is logger.infoed before re-raising.
+            The specific error message is printed before re-raising.
         """
         try:
             image_array = self.fconvert_image(image, 2048, to_grayscale=False)
@@ -516,7 +480,7 @@ class WaveletDCTWatermark:
 
             return watermark_array
         except Exception as e:
-            logger.info(f"Error recovering watermark: {str(e)}")
+            print(f"Error recovering watermark: {str(e)}")
             raise
 
     # def read_qr_code(self, image_path):
@@ -540,8 +504,12 @@ class WaveletDCTWatermark:
     #         results = []
     #         for qr in qr_codes:
     #             # Convert bytes to string
-    #             data = qr.data.decode("utf-8")
-    #             results.append({"data": data, "type": qr.type, "position": qr.rect})
+    #             data = qr.data.decode('utf-8')
+    #             results.append({
+    #                 'data': data,
+    #                 'type': qr.type,
+    #                 'position': qr.rect
+    #             })
 
     #         return results
 

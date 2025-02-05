@@ -73,7 +73,7 @@ def create_certificate(
 
     serialized_data = serialize_certificate(cert)
     # logger.info(serialized_data)
-    logger.info("certificate:", serialized_data.hex())
+    logger.info(f"certificate: {serialized_data.hex()}")
 
     return serialized_data.hex()
 

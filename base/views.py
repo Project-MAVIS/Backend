@@ -13,7 +13,8 @@ from django.conf import settings
 from django.http import FileResponse, HttpResponse
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
-from django.core.files import File
+# from django.core.files import Files
+
 
 # Django REST Framework
 from rest_framework import generics, permissions, status
@@ -139,7 +140,7 @@ class ImageUploadView(generics.CreateAPIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -179,7 +180,7 @@ class ImageUploadView(generics.CreateAPIView):
 
                 final_cert_qr_code = pyqrcode.create(signed_certificate)
 
-                buffer = io.BytesIO()
+                buffer = io.BytesIO() 
                 final_cert_qr_code.png(buffer, scale=8)
                 buffer.seek(0)
 
@@ -191,7 +192,7 @@ class ImageUploadView(generics.CreateAPIView):
                     watermark=PILImage.open(buffer)
                 )
                 watermarked_image = PILImage.fromarray(watermarked_array)
-
+ 
                 logger.info("c")
                 # Create a buffer for the watermarked image
                 watermarked_buffer = io.BytesIO()
@@ -209,8 +210,9 @@ class ImageUploadView(generics.CreateAPIView):
                 )
                 logger.info("a")
                 # Generate download link
-                download_url = reverse("image-download", args=[image_object.id])
-
+                download_url = request.build_absolute_uri(
+                                    reverse("download-image", kwargs={"image_id": image_object.id}))
+                
                 return Response(
                     {
                         "message": "Image verified successfully",
@@ -310,14 +312,22 @@ class ImageLinkProvider(APIView):
             final_cert_qr_code = pyqrcode.create(final_certificate)
             buffer = io.BytesIO()
             final_cert_qr_code.png(buffer, scale=8)
+            final_cert_qr_code.png("/home/omkar/Desktop/Backend/media/qr_codes", scale=8)
             buffer.seek(0)
 
             # Create watermarked version with embedded certificate
             watermarker = WaveletDCTWatermark()
+            # watermarked_image = PILImage.open(
+            #     watermarker.fwatermark_image(
+            #         original_image=PILImage.open(open(image_object.image.path, "rb")),
+            #         watermark=PILImage.open(buffer),
+            #     )
+            # )
+
             watermarked_image = PILImage.open(
-                watermarker.fwatermark_image(
-                    original_image=PILImage.open(image_object.image),
-                    watermark=PILImage.open(buffer),
+                watermarker.watermark_image(
+                    image_path=image_object.image.path,
+                    watermark_path="media/qr_codes/temp.png"
                 )
             )
 
@@ -331,6 +341,8 @@ class ImageLinkProvider(APIView):
 
             # Generate download link
             download_url = reverse("image-download", args=[image_object.id])
+
+
 
             return Response(
                 {
