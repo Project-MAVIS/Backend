@@ -1,5 +1,6 @@
 # Python standard library
 import io
+import logging
 import os
 import base64
 import hashlib
@@ -40,6 +41,8 @@ from .serializers import UserSerializer, ImageSerializer
 from .utils import *
 from .watermark import WaveletDCTWatermark
 from .certificate import *
+
+logger = logging.getLogger("server_log")
 
 
 @api_view(["GET"])
@@ -138,15 +141,12 @@ class ImageUploadView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        # #=======================#=======================#=======================
         serializer.is_valid(raise_exception=True)
-        # #=======================#=======================#=======================
 
         try:
             signature = base64.b64decode(request.data.get("image_hash"))
             image_obj = serializer.validated_data["image"]
             image_hash = hashlib.sha256(image_obj.read()).hexdigest()
-            # image_hash = request.data.get('image_hash')
 
             device_name = request.data.get("device_name")
 
@@ -157,7 +157,6 @@ class ImageUploadView(generics.CreateAPIView):
                 )
 
             try:
-                # user = User.objects.get(username=device_name)
                 device_key = DeviceKeys.objects.get(name=device_name)
             except DeviceKeys.DoesNotExist:
                 return Response(
@@ -166,48 +165,49 @@ class ImageUploadView(generics.CreateAPIView):
 
             if verify_signature(device_key.public_key, signature, image_hash.encode()):
                 # Save the original image first
-
                 image_object = serializer.save(
                     device_key=device_key, 
                     verified=False, 
                     image_hash=image_hash
                 )
 
-                # # Signs the image_hash
-                # server_signed_hash = encrypt_string(
-                #     image_hash, settings.SERVER_PUBLIC_KEY
-                # )
-
                 # Make the certificate, sign the certificate
                 certificate = create_certificate(image_object, device_key)
                 signed_certificate = encrypt_string(
                     certificate, settings.SERVER_PUBLIC_KEY
                 )
-                # then in the response send the signed certficate and signed hash
 
                 final_cert_qr_code = pyqrcode.create(signed_certificate)
+
                 buffer = io.BytesIO()
                 final_cert_qr_code.png(buffer, scale=8)
                 buffer.seek(0)
 
+                logger.info("d")
                 # Create watermarked version with embedded certificate
                 watermarker = WaveletDCTWatermark()
-                watermarked_image = PILImage.open(
-                    watermarker.fwatermark_image(
-                        original_image=PILImage.open(image_object.image.read()),
-                        watermark=PILImage.open(buffer),
-                    )
+                watermarked_array = watermarker.fwatermark_image(
+                    original_image=PILImage.open(image_obj),
+                    watermark=PILImage.open(buffer)
                 )
+                watermarked_image = PILImage.fromarray(watermarked_array)
 
+                logger.info("c")
+                # Create a buffer for the watermarked image
+                watermarked_buffer = io.BytesIO()
+                watermarked_image.save(watermarked_buffer, format='PNG')
+                watermarked_buffer.seek(0)
+                
+                logger.info("b")
                 # Save watermarked version
                 Image.objects.create(
                     device_key=device_key,
-                    image=watermarked_image,
+                    image=ContentFile(watermarked_buffer.getvalue(), name=f"watermarked_{image_object.image.name}"),
                     image_hash=calculate_image_hash(watermarked_image),
-                    original_image_hash = image_hash,
+                    original_image_hash=image_hash,
                     verified=True,
                 )
-
+                logger.info("a")
                 # Generate download link
                 download_url = reverse("image-download", args=[image_object.id])
 
@@ -224,7 +224,6 @@ class ImageUploadView(generics.CreateAPIView):
         
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class ImageLinkProvider(APIView):
     serializer_class = ImageSerializer

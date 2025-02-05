@@ -1,9 +1,12 @@
+import logging
 import struct
 import time
 from dataclasses import dataclass
 from typing import Tuple
 from .models import Image, DeviceKeys
 from django.contrib.auth.models import User
+
+logger = logging.getLogger("server_log")
 
 @dataclass
 class ImageCertificate:
@@ -69,8 +72,8 @@ def create_certificate(
     )
 
     serialized_data = serialize_certificate(cert)
-    # print(serialized_data)
-    print("certificate:", serialized_data.hex())
+    # logger.info(serialized_data)
+    logger.info("certificate:", serialized_data.hex())
 
     return serialized_data.hex()
 
@@ -233,8 +236,8 @@ def example_certificate_usage():
 
     # Serialize
     serialized_data = serialize_certificate(cert)
-    # print(serialized_data)
-    print(serialized_data.hex())
+    # logger.info(serialized_data)
+    logger.info(serialized_data.hex())
 
     # Deserialize
     deserialized_cert, bytes_consumed = deserialize_certificate(serialized_data)
@@ -243,10 +246,10 @@ def example_certificate_usage():
 
 
 # original, deserialized, binary_data = example_certificate_usage()
-# print(f"Original: {original}")
-# print(f"Deserialized: {deserialized}")
-# print(f"Binary length: {len(binary_data)} bytes")
-# print(f"Data matches: {original == deserialized}")
+# logger.info(f"Original: {original}")
+# logger.info(f"Deserialized: {deserialized}")
+# logger.info(f"Binary length: {len(binary_data)} bytes")
+# logger.info(f"Data matches: {original == deserialized}")
 
 
 def example_signed_certificate_usage():
@@ -263,18 +266,18 @@ def example_signed_certificate_usage():
     # Serialize
     binary_data = serialize_signed_certificate(sample_data)
 
-    # Print as hex
-    print("Serialized data (hex):")
-    print(binary_data.hex())
-    print(f"Total length: {len(binary_data)} bytes")
+    # logger.info as hex
+    logger.info("Serialized data (hex):")
+    logger.info(binary_data.hex())
+    logger.info(f"Total length: {len(binary_data)} bytes")
 
     # Deserialize
     total_length, recovered_data = deserialize_signed_certificate(binary_data)
-    print("\nDeserialized data:")
-    print(f"Total Length: {total_length} bytes")
-    print(f"Public Key Length: {recovered_data.public_key_length}")
-    print(f"Public Key: {recovered_data.public_key}")
-    print(f"Signed Certificate: {recovered_data.signed_certificate}")
+    logger.info("\nDeserialized data:")
+    logger.info(f"Total Length: {total_length} bytes")
+    logger.info(f"Public Key Length: {recovered_data.public_key_length}")
+    logger.info(f"Public Key: {recovered_data.public_key}")
+    logger.info(f"Signed Certificate: {recovered_data.signed_certificate}")
 
 
 if __name__ == "__main__":

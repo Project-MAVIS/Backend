@@ -87,7 +87,7 @@ LOGGING = {
         "server_log": {
             "handlers": ["file", "console"],
             "level": "DEBUG",
-            "propagate": False,
+            "propagate": True,
         },
     },
 }
