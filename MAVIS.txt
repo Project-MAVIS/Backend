@@ -113,3 +113,23 @@ omkar
 #  with whatever other provenance data is desired about the image
 
 ===================================================================================================
+> Only our platform is supported <
+
+1		2		3
+Size, entropy, mavis secret size 
+
+high entropy (2) -> Better extraction
+
+image gets hash, certificate along with it
+
+make the certificate in the:
+	metadata,
+	endpoint response, 
+
+dependence 
+	1. on the internet
+		hash(image) -> certficate(server)
+	2. you expect image and the certificate
+		- Core assumption
+	3. qr code is always readable (minimize length)
+	4. 
