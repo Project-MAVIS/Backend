@@ -116,6 +116,8 @@ class ImageVerifyView(generics.CreateAPIView):
                 for chunk in file.chunks():
                     f.write(chunk)
 
+            logger.info(1)
+
             watermarker = WaveletDCTWatermark()
             watermarker.recover_watermark(
                 image_path=f"{settings.MEDIA_ROOT}/verify/{file._name}"
@@ -124,8 +126,12 @@ class ImageVerifyView(generics.CreateAPIView):
             hash = watermarker.read_qr_code(
                 f"{settings.MEDIA_ROOT}/result/recovered_watermark.jpg"
             )
-
+            logger.info(2)
+            
             values = Image.objects.filter(image_hash=hash[0]["data"])
+            
+            logger.info(3)
+
             # Return a success response
             if len(values) >= 1:
                 return Response({"status": "verified"})
@@ -174,14 +180,22 @@ class ImageUploadView(generics.CreateAPIView):
 
                 # Make the certificate, sign the certificate
                 certificate = create_certificate(image_object, device_key)
-                signed_certificate = encrypt_string(
-                    certificate, settings.SERVER_PUBLIC_KEY
-                )
+                certificate = "20ccdacd1dc963c0179a770090788a33bd98d69f7fb90d387d64c474262c4b79"
+                # signed_certificate = encrypt_string(
+                #     certificate, settings.SERVER_PUBLIC_KEY
+                # )
+                
+                logger.info(f"signed_certificate: {certificate}")
 
-                final_cert_qr_code = pyqrcode.create(signed_certificate)
+                final_cert_qr_code = pyqrcode.create(certificate)
 
                 buffer = io.BytesIO() 
                 final_cert_qr_code.png(buffer, scale=8)
+
+                logger.info("SAVING")
+                final_cert_qr_code.png("media/verify/temp.png", scale=8)
+                logger.info("SAVED")
+
                 buffer.seek(0)
 
                 logger.info("d")

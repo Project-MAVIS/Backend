@@ -1,0 +1,19 @@
+certificate: 250000000067a44ab900000000000000590000000400000002056368696c69056368696c69
+signed_certificate: bfCMO9TYDit7tp2g0RbE46jHCA4OdIh0OYXPdiO/6LEejC9KsVlX442p/myIV+vfMUbHUp6zEfgmaWYV4gxxPql8sU73DodWqood9I0PDUM4xJZr2wZad3gFS9DiDceu2WdImn8ZxWBtlrtC+k7IUXxfYiHPO5b13nwIY2cUQvs1YeQF229CCNHhCf0JKiuF+qj9OErvfbWIXq4uQ/YOWCMGxXJ60T9DKBPVz6cWq5+aJ5pNcDn7lbpbKp1l4kodC7Aye1o0zBcohSsmAPUfoOzOl4Fck8uM4lddMzCwW46h9TD1sLKyF7WQE7tcEMvt9H7YKB7bhDAuzdT0NRR+zA==
+[2025-02-06 06:19:19] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/certificate.py changed, reloading.
+[2025-02-06 06:19:27] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-06 06:19:46] INFO django.utils.autoreload: /home/omkar/Desktop/Backend/base/views.py changed, reloading.
+[2025-02-06 06:19:49] INFO django.utils.autoreload: Watching for file changes with StatReloader
+[2025-02-06 06:19:55] INFO server_log: certificate: 250000000067a45486000000000000005f0000000400000002056368696c69056368696c69
+[2025-02-06 06:19:55] INFO server_log: signed_certificate: 20ccdacd1dc963c0179a770090788a33bd98d69f7fb90d387d64c474262c4b79
+[2025-02-06 06:19:56] INFO server_log: SAVING
+[2025-02-06 06:19:56] INFO server_log: SAVED
+[2025-02-06 06:19:56] INFO server_log: d
+[2025-02-06 06:20:12] INFO server_log: c
+[2025-02-06 06:20:14] INFO server_log: b
+[2025-02-06 06:20:20] INFO server_log: a
+[2025-02-06 06:20:20] INFO django.server: "POST /api/upload-image/ HTTP/1.1" 200 95
+[2025-02-06 06:21:15] INFO server_log: 1
+[2025-02-06 06:21:22] INFO server_log: 2
+[2025-02-06 06:21:22] INFO server_log: 3
+[2025-02-06 06:21:22] INFO django.server: "POST /api/watermark-extract/ HTTP/1.1" 200 25

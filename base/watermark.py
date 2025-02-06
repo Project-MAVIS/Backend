@@ -6,8 +6,8 @@ from PIL import Image
 from scipy.fftpack import dct, idct
 from pathlib import Path
 
-# import cv2
-# from pyzbar.pyzbar import decode
+import cv2
+from pyzbar.pyzbar import decode
 
 logger = logging.getLogger("server_log")
 
@@ -483,39 +483,39 @@ class WaveletDCTWatermark:
             print(f"Error recovering watermark: {str(e)}")
             raise
 
-    # def read_qr_code(self, image_path):
-    #     try:
-    #         # Read the image
-    #         image = cv2.imread(image_path)
+    def read_qr_code(self, image_path):
+        try:
+            # Read the image
+            image = cv2.imread(image_path)
 
-    #         if image is None:
-    #             raise ValueError(f"Could not read image at {image_path}")
+            if image is None:
+                raise ValueError(f"Could not read image at {image_path}")
 
-    #         # Convert to grayscale
-    #         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # Convert to grayscale
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    #         # Decode QR codes
-    #         qr_codes = decode(gray)
+            # Decode QR codes
+            qr_codes = decode(gray)
 
-    #         if not qr_codes:
-    #             logger.info("No QR codes found in the image")
-    #             return []
+            if not qr_codes:
+                logger.info("No QR codes found in the image")
+                return []
 
-    #         results = []
-    #         for qr in qr_codes:
-    #             # Convert bytes to string
-    #             data = qr.data.decode('utf-8')
-    #             results.append({
-    #                 'data': data,
-    #                 'type': qr.type,
-    #                 'position': qr.rect
-    #             })
+            results = []
+            for qr in qr_codes:
+                # Convert bytes to string
+                data = qr.data.decode('utf-8')
+                results.append({
+                    'data': data,
+                    'type': qr.type,
+                    'position': qr.rect
+                })
 
-    #         return results
+            return results
 
-    #     except Exception as e:
-    #         logger.info(f"Error reading QR code: {str(e)}")
-    #         raise e
+        except Exception as e:
+            logger.info(f"Error reading QR code: {str(e)}")
+            raise e
 
 
 # def main():

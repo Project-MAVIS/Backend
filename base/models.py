@@ -23,7 +23,7 @@ class Image(models.Model):
     verified = models.BooleanField(default=False)
 
     def __str__(self) -> str:
-        return f"{self.user.username} -> {self.uploaded_at}"
+        return f"{self.device_key.user.username} -> {self.uploaded_at}"
 
 @receiver(pre_delete, sender=Image)
 def delete_image_file(sender, instance, **kwargs):
