@@ -13,6 +13,7 @@ from django.conf import settings
 from django.http import FileResponse, HttpResponse
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
+
 # from django.core.files import Files
 
 
@@ -129,9 +130,9 @@ class ImageVerifyView(generics.CreateAPIView):
                 f"{settings.MEDIA_ROOT}/result/recovered_watermark.jpg"
             )
             logger.info(2)
-            
+
             values = Image.objects.filter(image_hash=hash[0]["data"])
-            
+
             logger.info(3)
 
             # Return a success response
@@ -177,77 +178,85 @@ class ImageUploadView(generics.CreateAPIView):
             if verify_signature(device_key.public_key, signature, image_hash.encode()):
                 # Save the original image first
                 image_object = serializer.save(
-                    device_key=device_key, 
-                    verified=False, 
-                    image_hash=image_hash
+                    device_key=device_key, verified=False, image_hash=image_hash
                 )
 
                 # Make the certificate, sign the certificate
                 certificate = create_certificate(image_object, device_key)
-                # certificate = "20ccdacd1dc963c0179a770090788a33bd98d69f7fb90d387d64c474262c4b79"
                 signed_certificate = encrypt_string(
                     certificate, settings.SERVER_PUBLIC_KEY
                 )
-                
+
                 certificate_hash = calculate_string_hash(certificate)
-                
                 logger.info(f"signed_certificate: {certificate}")
 
                 final_cert_qr_code = pyqrcode.create(certificate_hash)
-
-                buffer = io.BytesIO() 
+                buffer = io.BytesIO()
                 final_cert_qr_code.png(buffer, scale=8)
                 buffer.seek(0)
 
                 logger.info("d")
+
                 # Create watermarked version with embedded certificate
                 watermarker = WaveletDCTWatermark()
                 watermarked_array = watermarker.fwatermark_image(
                     original_image=PILImage.open(image_obj),
-                    watermark=PILImage.open(buffer)
+                    watermark=PILImage.open(buffer),
                 )
                 watermarked_image = PILImage.fromarray(watermarked_array)
- 
+
                 logger.info("c")
                 # Create a buffer for the watermarked image
                 watermarked_buffer = io.BytesIO()
-                watermarked_image.save(watermarked_buffer, format='PNG')
+                watermarked_image.save(watermarked_buffer, format="PNG")
                 watermarked_buffer.seek(0)
-                
+
                 logger.info("b1")
-                
+
                 metadata_dict = {
-                    "signed_certificate": signed_certificate,                
+                    "signed_certificate": signed_certificate,
                 }
-                
-                # PIL Image object
+
                 logger.info(f"Before Metadata-ing: {type(watermarked_image)}")
-                watermarked_image = fadd_complex_metadata(image_obj=watermarked_image, metadata_dict=metadata_dict)
-                logger.info(f"watermarked_image_metadata: {fextract_metadata(watermarked_image)}")
-
-                logger.info(f"After Metadata-ing: {type(watermarked_image)}")
-
-
-                # Save watermarked version
-                water_image_obj = models.Image(
-                    device_key=device_key,
-                    image=ContentFile(watermarked_buffer.getvalue(), name=f"watermarked_{image_object.image.name}"),
-                    image_hash=calculate_image_hash(watermarked_image),
-                    original_image_hash=image_hash,
-                    verified=True, 
+                watermarked_image_with_metadata = add_exif_to_image(
+                    image=watermarked_image, exif_dict=metadata_dict
                 )
-                
-                logger.info("b2")                
-                
+                logger.info(
+                    f"watermarked_image_metadata: {fextract_metadata(watermarked_image_with_metadata)}"
+                )
+
+                logger.info(
+                    f"After Metadata-ing: {type(watermarked_image_with_metadata)}"
+                )
+
+                # Save watermarked version to DJ object
+                dj_wm_img_obj = models.Image(
+                    device_key=device_key,
+                    image=ContentFile(
+                        watermarked_buffer.getvalue(),
+                        name=f"watermarked_{image_object.image.name}",
+                    ),
+                    image_hash=calculate_image_hash(watermarked_image_with_metadata),
+                    original_image_hash=image_hash,
+                    verified=True,
+                )
+
+                logger.info("b2")
+
                 # image_obj.image = ContentFile(fadd_complex_metadata(image_obj.image, metadata_dict))
-                water_image_obj.save()
-                watermarked_image.save(Path.cwd() / "media" / "temp/abc.png", format="PNG", optimize=True)
+                dj_wm_img_obj.save()
+                watermarked_image_with_metadata.save(
+                    Path.cwd() / "media" / "temp" / "abc2.png",
+                    format="PNG",
+                    optimize=True,
+                )
 
                 logger.info("a")
                 # Generate download link
                 download_url = request.build_absolute_uri(
-                                    reverse("download-image", kwargs={"image_id": water_image_obj.id}))
-                
+                    reverse("download-image", kwargs={"image_id": dj_wm_img_obj.id})
+                )
+
                 return Response(
                     {
                         "message": "Image verified successfully",
@@ -258,9 +267,10 @@ class ImageUploadView(generics.CreateAPIView):
             return Response(
                 {"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ImageLinkProvider(APIView):
     serializer_class = ImageSerializer
@@ -347,7 +357,9 @@ class ImageLinkProvider(APIView):
             final_cert_qr_code = pyqrcode.create(final_certificate)
             buffer = io.BytesIO()
             final_cert_qr_code.png(buffer, scale=8)
-            final_cert_qr_code.png("/home/omkar/Desktop/Backend/media/qr_codes", scale=8)
+            final_cert_qr_code.png(
+                "/home/omkar/Desktop/Backend/media/qr_codes", scale=8
+            )
             buffer.seek(0)
 
             # Create watermarked version with embedded certificate
@@ -362,7 +374,7 @@ class ImageLinkProvider(APIView):
             watermarked_image = PILImage.open(
                 watermarker.watermark_image(
                     image_path=image_object.image.path,
-                    watermark_path="media/qr_codes/temp.png"
+                    watermark_path="media/qr_codes/temp.png",
                 )
             )
 
