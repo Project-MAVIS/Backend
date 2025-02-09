@@ -111,45 +111,6 @@ def fextract_metadata(img: PILImage.Image):
         print("No custom metadata found.")
         return None
 
-def add_exif_to_image(image: PILImage.Image, exif_dict: dict) -> PILImage.Image:
-    """
-    Adds EXIF data to a PIL Image object and returns the modified image.
-    
-    Args:
-        image (PIL.Image.Image): The input image
-        exif_dict (dict): Dictionary containing EXIF data
-        
-    Returns:
-        PIL.Image.Image: Image with added EXIF data
-        
-    Note: The image must be in a format that supports EXIF data (like JPEG)
-    """
-    # Create a copy of the image to avoid modifying the original
-    modified_image = image.copy()
-    
-    # Convert the dictionary to EXIF format
-    exif_bytes = piexif.dump(exif_dict)
-    
-    # If the image is in PNG format, convert it to JPEG
-    if modified_image.format == 'PNG':
-        # Create a new image with white background
-        bg = PILImage.new('RGB', modified_image.size, (255, 255, 255))
-        if modified_image.mode in ('RGBA', 'LA'):
-            bg.paste(modified_image, mask=modified_image.split()[-1])
-        else:
-            bg.paste(modified_image)
-        modified_image = bg
-    
-    # Save the image with EXIF data to a bytes buffer
-    from io import BytesIO
-    buffer = BytesIO()
-    modified_image.save(buffer, format='JPEG', exif=exif_bytes)
-    
-    # Reopen the image from the buffer
-    buffer.seek(0)
-    result_image = PILImage.open(buffer)
-    
-    return result_image
 # metadata = {
 #     "Author": "Omkar",
 #     "Description": "This is an example image with complex metadata.",

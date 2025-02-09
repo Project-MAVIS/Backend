@@ -222,7 +222,7 @@ class ImageUploadView(generics.CreateAPIView):
                 
                 # PIL Image object
                 logger.info(f"Before Metadata-ing: {type(watermarked_image)}")
-                watermarked_image = add_exif_to_image(image=watermarked_image, exif_dict=metadata_dict)
+                watermarked_image = fadd_complex_metadata(image_obj=watermarked_image, metadata_dict=metadata_dict)
                 logger.info(f"watermarked_image_metadata: {fextract_metadata(watermarked_image)}")
 
                 logger.info(f"After Metadata-ing: {type(watermarked_image)}")
