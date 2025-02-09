@@ -1,7 +1,10 @@
 import hashlib
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric.types import PublicKeyTypes, PrivateKeyTypes
+from cryptography.hazmat.primitives.asymmetric.types import (
+    PublicKeyTypes,
+    PrivateKeyTypes,
+)
 import base64
 import os
 import numpy as np
@@ -13,6 +16,7 @@ import piexif
 import datetime
 
 from cryptography.hazmat.primitives import serialization
+
 
 def verify_hash(file_path):
     digest = hashlib.sha256()
@@ -59,7 +63,8 @@ def add_complex_metadata(file_path, metadata_dict):
     img.save(output_path, exif=exif_bytes)
     print(f"Image with metadata saved at: {output_path}")
 
-def fadd_complex_metadata(image_obj: PILImage, metadata_dict):
+
+def fadd_complex_metadata(image_obj: PILImage.Image, metadata_dict):
     # Convert metadata dictionary to JSON string
     metadata_json = json.dumps(metadata_dict)
 
@@ -70,7 +75,7 @@ def fadd_complex_metadata(image_obj: PILImage, metadata_dict):
 
     # Add exif data to the image
     image_obj.info["exif"] = exif_bytes
-    
+
     return image_obj
 
 
@@ -93,6 +98,7 @@ def extract_metadata(file_path):
     else:
         print("No custom metadata found.")
         return None
+
 
 def fextract_metadata(img: PILImage.Image):
     # Extract Exif data from the image

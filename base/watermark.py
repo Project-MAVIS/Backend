@@ -7,9 +7,11 @@ from scipy.fftpack import dct, idct
 from pathlib import Path
 
 import cv2
-from pyzbar.pyzbar import decode
+
+# from pyzbar.pyzbar import decode
 
 logger = logging.getLogger("server_log")
+
 
 class WaveletDCTWatermark:
     def __init__(self, base_path=None):
@@ -357,7 +359,7 @@ class WaveletDCTWatermark:
             logger.info(f"Error in watermarking process: {str(e)}")
             raise
 
-    def fwatermark_image(self, original_image, watermark):
+    def fwatermark_image(self, original_image: Image, watermark: Image):
         """Watermark image received directly from view, returning the watermarked image array.
 
         Similar to watermark_image() but takes PIL Image objects directly instead of file paths
@@ -397,6 +399,7 @@ class WaveletDCTWatermark:
 
             image_array_copy = watermarked_image.clip(0, 255)
             image_array_copy = image_array_copy.astype("uint8")
+
             return image_array_copy
         except Exception as e:
             print(f"Error in watermarking process: {str(e)}")
@@ -483,39 +486,41 @@ class WaveletDCTWatermark:
             print(f"Error recovering watermark: {str(e)}")
             raise
 
-    def read_qr_code(self, image_path):
-        try:
-            # Read the image
-            image = cv2.imread(image_path)
+    ## Keeping this function commented for now
+    ## @Omkar dont u dare uncomment this
+    # def read_qr_code(self, image_path):
+    #     try:
+    #         # Read the image
+    #         image = cv2.imread(image_path)
 
-            if image is None:
-                raise ValueError(f"Could not read image at {image_path}")
+    #         if image is None:
+    #             raise ValueError(f"Could not read image at {image_path}")
 
-            # Convert to grayscale
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #         # Convert to grayscale
+    #         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-            # Decode QR codes
-            qr_codes = decode(gray)
+    #         # Decode QR codes
+    #         qr_codes = decode(gray)
 
-            if not qr_codes:
-                logger.info("No QR codes found in the image")
-                return []
+    #         if not qr_codes:
+    #             logger.info("No QR codes found in the image")
+    #             return []
 
-            results = []
-            for qr in qr_codes:
-                # Convert bytes to string
-                data = qr.data.decode('utf-8')
-                results.append({
-                    'data': data,
-                    'type': qr.type,
-                    'position': qr.rect
-                })
+    #         results = []
+    #         for qr in qr_codes:
+    #             # Convert bytes to string
+    #             data = qr.data.decode('utf-8')
+    #             results.append({
+    #                 'data': data,
+    #                 'type': qr.type,
+    #                 'position': qr.rect
+    #             })
 
-            return results
+    #         return results
 
-        except Exception as e:
-            logger.info(f"Error reading QR code: {str(e)}")
-            raise e
+    #     except Exception as e:
+    #         logger.info(f"Error reading QR code: {str(e)}")
+    #         raise e
 
 
 # def main():
