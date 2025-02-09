@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 
 logger = logging.getLogger("server_log")
 
+
 @dataclass
 class ImageCertificate:
     """Data class representing the image certificate structure."""
@@ -19,6 +20,7 @@ class ImageCertificate:
     device_id: int
     username: str
     device_name: struct
+
 
 def calculate_cert_length(username: str, device_name: str) -> int:
     """

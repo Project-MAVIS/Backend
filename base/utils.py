@@ -14,6 +14,7 @@ import os
 import json
 import piexif
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from cryptography.hazmat.primitives import serialization
@@ -60,7 +61,7 @@ def verify_signature(public_key_pem: PublicKeyTypes, signature, data):
 def encrypt_string(plain_text: str, public_key: rsa.RSAPublicKey) -> str:
     """Encrypts a given string using the RSA public key."""
     plain_text_bytes = plain_text.encode("utf-8")
-    
+
     # Encrypt the bytes using the public key
     encrypted_bytes = public_key.encrypt(
         plain_text_bytes,
@@ -144,8 +145,12 @@ def initialize_server_keys() -> tuple[PrivateKeyTypes, PublicKeyTypes]:
         public_pem = b64decode(public_pem.encode())
 
         # Load private key to generate public key
-        private_key = serialization.load_pem_private_key(private_pem, password=None, backend=default_backend())
-        public_key = serialization.load_pem_public_key(public_pem, backend=default_backend())
+        private_key = serialization.load_pem_private_key(
+            private_pem, password=None, backend=default_backend()
+        )
+        public_key = serialization.load_pem_public_key(
+            public_pem, backend=default_backend()
+        )
 
         return private_key, public_key
 
@@ -154,26 +159,28 @@ def initialize_server_keys() -> tuple[PrivateKeyTypes, PublicKeyTypes]:
         "No private key found in environment variables.\n Generate key pair with the following command:\n\nsh scripts/keys.sh"
     )
 
+
 def calculate_image_hash(image: Image):
     """
     Calculate SHA-256 hash of a PIL Image object.
-    
+
     Args:
         image: PIL Image object
-        
+
     Returns:
         str: SHA-256 hash string
     """
     import hashlib
     import io
-    
+
     # Convert image to bytes
     img_byte_arr = io.BytesIO()
-    image.save(img_byte_arr, format=image.format or 'PNG')
+    image.save(img_byte_arr, format=image.format or "PNG")
     img_byte_arr = img_byte_arr.getvalue()
-    
+
     # Calculate and return SHA-256 hash
     return hashlib.sha256(img_byte_arr).hexdigest()
+
 
 def calculate_string_hash(input_string: str) -> str:
     """
@@ -189,6 +196,7 @@ def calculate_string_hash(input_string: str) -> str:
 
     # Encode string to bytes and calculate hash
     return hashlib.sha256(input_string.encode()).hexdigest()
+
 
 # metadata = {
 #     "Author": "Omkar",

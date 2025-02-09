@@ -4,6 +4,7 @@ import os
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
+
 class DeviceKeys(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.TextField()
@@ -14,9 +15,10 @@ class DeviceKeys(models.Model):
     def __str__(self) -> str:
         return self.user.username
 
+
 class Image(models.Model):
     device_key = models.ForeignKey(DeviceKeys, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='images/')
+    image = models.ImageField(upload_to="images/")
     image_hash = models.TextField()
     original_image_hash = models.TextField(null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
@@ -24,6 +26,7 @@ class Image(models.Model):
 
     def __str__(self) -> str:
         return f"{self.device_key.user.username} -> {self.uploaded_at}"
+
 
 @receiver(pre_delete, sender=Image)
 def delete_image_file(sender, instance, **kwargs):

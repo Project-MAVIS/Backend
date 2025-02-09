@@ -117,6 +117,7 @@ def fextract_metadata(img: PILImage.Image):
         print("No custom metadata found.")
         return None
 
+
 # metadata = {
 #     "Author": "Omkar",
 #     "Description": "This is an example image with complex metadata.",
