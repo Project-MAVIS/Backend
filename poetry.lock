@@ -1159,6 +1159,18 @@ files = [
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pypng"
+version = "0.20220715.0"
+description = "Pure Python library for saving and loading PNG images"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pypng-0.20220715.0-py3-none-any.whl", hash = "sha256:4a43e969b8f5aaafb2a415536c1a8ec7e341cd6a3f957fd5b5f32a4cfeed902c"},
+    {file = "pypng-0.20220715.0.tar.gz", hash = "sha256:739c433ba96f078315de54c0db975aee537cbc3e1d0ae4ed9aab0ca1e427e2c1"},
+]
+
+[[package]]
 name = "pyqrcode"
 version = "1.2.1"
 description = "A QR code generator written purely in Python with SVG, EPS, PNG and terminal output."
@@ -1775,4 +1787,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "3f495ef48b455e2512d483adb70c09312926720de891deac7a7272497cdab6a0"
+content-hash = "a1df1ada0f5a3dd665d18b698aa70fd2f76eaf4213529aed2f8604b67f0b7945"
