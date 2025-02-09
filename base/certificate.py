@@ -18,8 +18,7 @@ class ImageCertificate:
     user_id: int
     device_id: int
     username: str
-    device_name: str
-
+    device_name: struct
 
 def calculate_cert_length(username: str, device_name: str) -> int:
     """
@@ -41,7 +40,7 @@ def calculate_cert_length(username: str, device_name: str) -> int:
     username_bytes = len(username.encode("utf-8"))
     device_name_bytes = len(device_name.encode("utf-8"))
 
-    # Fixed fields total: 1 + 8 + 8 + 4 + 4 + 1 + 1 = 27 bytes
+    # Fixed fields total: 1 + 8 + 8 + 4 + 4 + 1 + 1 = 27 bytes + 40 in worst case of variable length fields
     fixed_fields_length = struct.calcsize(">BQQII") + 2  # +2 for the length fields
 
     # Total length is fixed fields plus variable length strings

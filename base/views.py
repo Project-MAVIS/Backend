@@ -42,6 +42,8 @@ from .serializers import UserSerializer, ImageSerializer
 from .utils import *
 from .watermark import WaveletDCTWatermark
 from .certificate import *
+from .metadata import *
+from . import models
 
 logger = logging.getLogger("server_log")
 
@@ -146,6 +148,8 @@ class ImageUploadView(generics.CreateAPIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
 
+    from .utils import calculate_string_hash
+
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -180,22 +184,19 @@ class ImageUploadView(generics.CreateAPIView):
 
                 # Make the certificate, sign the certificate
                 certificate = create_certificate(image_object, device_key)
-                certificate = "20ccdacd1dc963c0179a770090788a33bd98d69f7fb90d387d64c474262c4b79"
-                # signed_certificate = encrypt_string(
-                #     certificate, settings.SERVER_PUBLIC_KEY
-                # )
+                # certificate = "20ccdacd1dc963c0179a770090788a33bd98d69f7fb90d387d64c474262c4b79"
+                signed_certificate = encrypt_string(
+                    certificate, settings.SERVER_PUBLIC_KEY
+                )
+                
+                certificate_hash = calculate_string_hash(certificate)
                 
                 logger.info(f"signed_certificate: {certificate}")
 
-                final_cert_qr_code = pyqrcode.create(certificate)
+                final_cert_qr_code = pyqrcode.create(certificate_hash)
 
                 buffer = io.BytesIO() 
                 final_cert_qr_code.png(buffer, scale=8)
-
-                logger.info("SAVING")
-                final_cert_qr_code.png("media/verify/temp.png", scale=8)
-                logger.info("SAVED")
-
                 buffer.seek(0)
 
                 logger.info("d")
@@ -213,19 +214,39 @@ class ImageUploadView(generics.CreateAPIView):
                 watermarked_image.save(watermarked_buffer, format='PNG')
                 watermarked_buffer.seek(0)
                 
-                logger.info("b")
+                logger.info("b1")
+                
+                metadata_dict = {
+                    "signed_certificate": signed_certificate,                
+                }
+                
+                # PIL Image object
+                logger.info(f"Before Metadata-ing: {type(watermarked_image)}")
+                watermarked_image = add_exif_to_image(image=watermarked_image, exif_dict=metadata_dict)
+                logger.info(f"watermarked_image_metadata: {fextract_metadata(watermarked_image)}")
+
+                logger.info(f"After Metadata-ing: {type(watermarked_image)}")
+
+
                 # Save watermarked version
-                Image.objects.create(
+                water_image_obj = models.Image(
                     device_key=device_key,
                     image=ContentFile(watermarked_buffer.getvalue(), name=f"watermarked_{image_object.image.name}"),
                     image_hash=calculate_image_hash(watermarked_image),
                     original_image_hash=image_hash,
-                    verified=True,
+                    verified=True, 
                 )
+                
+                logger.info("b2")                
+                
+                # image_obj.image = ContentFile(fadd_complex_metadata(image_obj.image, metadata_dict))
+                water_image_obj.save()
+                watermarked_image.save(Path.cwd() / "media" / "temp/abc.png", format="PNG", optimize=True)
+
                 logger.info("a")
                 # Generate download link
                 download_url = request.build_absolute_uri(
-                                    reverse("download-image", kwargs={"image_id": image_object.id}))
+                                    reverse("download-image", kwargs={"image_id": water_image_obj.id}))
                 
                 return Response(
                     {
@@ -355,8 +376,6 @@ class ImageLinkProvider(APIView):
 
             # Generate download link
             download_url = reverse("image-download", args=[image_object.id])
-
-
 
             return Response(
                 {

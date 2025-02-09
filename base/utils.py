@@ -175,6 +175,21 @@ def calculate_image_hash(image: Image):
     # Calculate and return SHA-256 hash
     return hashlib.sha256(img_byte_arr).hexdigest()
 
+def calculate_string_hash(input_string: str) -> str:
+    """
+    Calculate SHA-256 hash of a string.
+
+    Args:
+        input_string: String to hash
+
+    Returns:
+        str: SHA-256 hash string
+    """
+    import hashlib
+
+    # Encode string to bytes and calculate hash
+    return hashlib.sha256(input_string.encode()).hexdigest()
+
 # metadata = {
 #     "Author": "Omkar",
 #     "Description": "This is an example image with complex metadata.",
