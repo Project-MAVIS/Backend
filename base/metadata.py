@@ -3,7 +3,27 @@ from PIL import Image as PILImage
 import json
 import numpy as np
 import piexif
+from io import BytesIO
 
+def add_exif_to_array_image(array: np.ndarray, exif_dict: dict) -> tuple[PILImage.Image, BytesIO]:
+    # Convert array to PIL Image
+    img = PILImage.fromarray(array)
+    
+    # First save it as JPEG to establish the format
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    # Now create the EXIF bytes
+    exif_bytes = piexif.dump(exif_dict)
+    
+    # Create a new buffer and save with EXIF
+    final_buffer = BytesIO()
+    img.save(final_buffer, format='PNG', exif=exif_bytes)
+    final_buffer.seek(0)
+    
+    # Return the final image
+    return (PILImage.open(final_buffer), final_buffer)
 
 def verify_hash(file_path):
     digest = hashlib.sha256()
@@ -103,6 +123,9 @@ def fextract_metadata(img: PILImage.Image):
     else:
         print("No custom metadata found.")
         return None
+
+def extract_exif_data(img: PILImage.Image):
+    return piexif.load(img.info['exif'])
 
 
 # metadata = {

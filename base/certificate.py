@@ -21,6 +21,17 @@ class ImageCertificate:
     username: str
     device_name: struct
 
+    def __str__(self):
+        return f"""
+cert_len: {self.cert_len}
+timestamp: {self.timestamp}
+image_id: {self.image_id}
+user_id: {self.user_id}
+device_id: {self.device_id}
+username: {self.username}
+device_name: {self.device_name}
+"""
+
 
 def calculate_cert_length(username: str, device_name: str) -> int:
     """
@@ -55,10 +66,10 @@ def create_certificate(
     image: Image, device_key: DeviceKeys, timestamp: int = int(time.time())
 ) -> str:
     user: User = image.device_key.user
-    time_stamp = timestamp
-    image_id = image.id
-    user_id = user.id
-    device_key_id = device_key.id
+    time_stamp = hex(timestamp)
+    image_id = hex(image.id)
+    user_id = hex(image.id)
+    device_key_id = hex(image.id)
     user_name = user.username
     device_name = device_key.name
 
@@ -73,8 +84,8 @@ def create_certificate(
     )
 
     serialized_data = serialize_certificate(cert)
-    # logger.info(serialized_data)
-    logger.info(f"certificate: {serialized_data.hex()}")
+    # print(serialized_data)
+    print(f"certificate: {serialized_data.hex()}")
 
     return serialized_data.hex()
 
@@ -123,7 +134,7 @@ def serialize_certificate(cert: ImageCertificate) -> bytes:
 
     return header + variable_fields
 
-
+# TODO: Fix deserialize certificate error (not working)
 def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
     """
     Deserialize bytes into an ImageCertificate object.
@@ -137,6 +148,7 @@ def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
         fixed_format, data[:fixed_size]
     )
 
+    print("Deserializer info: ", cert_len, timestamp, image_id, user_id, device_id)
     # Get username length and username
     username_length = data[fixed_size]
     username_start = fixed_size + 1
@@ -237,20 +249,20 @@ def example_certificate_usage():
 
     # Serialize
     serialized_data = serialize_certificate(cert)
-    # logger.info(serialized_data)
-    logger.info(serialized_data.hex())
+    # print(serialized_data)
+    print(serialized_data.hex())
 
     # Deserialize
     deserialized_cert, bytes_consumed = deserialize_certificate(serialized_data)
-
+    print(f"deserialized_cert: {deserialized_cert}")
     return cert, deserialized_cert, serialized_data
 
 
 # original, deserialized, binary_data = example_certificate_usage()
-# logger.info(f"Original: {original}")
-# logger.info(f"Deserialized: {deserialized}")
-# logger.info(f"Binary length: {len(binary_data)} bytes")
-# logger.info(f"Data matches: {original == deserialized}")
+# print(f"Original: {original}")
+# print(f"Deserialized: {deserialized}")
+# print(f"Binary length: {len(binary_data)} bytes")
+# print(f"Data matches: {original == deserialized}")
 
 
 def example_signed_certificate_usage():
@@ -267,19 +279,20 @@ def example_signed_certificate_usage():
     # Serialize
     binary_data = serialize_signed_certificate(sample_data)
 
-    # logger.info as hex
-    logger.info("Serialized data (hex):")
-    logger.info(binary_data.hex())
-    logger.info(f"Total length: {len(binary_data)} bytes")
+    # print as hex
+    print("Serialized data (hex):")
+    print(binary_data.hex())
+    print(f"Total length: {len(binary_data)} bytes")
 
     # Deserialize
     total_length, recovered_data = deserialize_signed_certificate(binary_data)
-    logger.info("\nDeserialized data:")
-    logger.info(f"Total Length: {total_length} bytes")
-    logger.info(f"Public Key Length: {recovered_data.public_key_length}")
-    logger.info(f"Public Key: {recovered_data.public_key}")
-    logger.info(f"Signed Certificate: {recovered_data.signed_certificate}")
+    print("\nDeserialized data:")
+    print(f"Total Length: {total_length} bytes")
+    print(f"Public Key Length: {recovered_data.public_key_length}")
+    print(f"Public Key: {recovered_data.public_key}")
+    print(f"Signed Certificate: {recovered_data.signed_certificate}")
 
 
 if __name__ == "__main__":
-    example_signed_certificate_usage()
+    # example_signed_certificate_usage()
+    example_certificate_usage()

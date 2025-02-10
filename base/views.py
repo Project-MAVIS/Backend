@@ -35,6 +35,7 @@ import pyqrcode
 
 # Image processing
 import numpy as np
+import piexif
 from PIL import Image as PILImage
 
 # Local imports
@@ -143,135 +144,137 @@ class ImageVerifyView(generics.CreateAPIView):
         except Exception as e:
             return Response({"message": f"There was an error: {str(e)}"}, status=200)
 
-
+# * Image upload, signing, metadata addition working
+# ! Certificate serializing-deserializing issue
 class ImageUploadView(generics.CreateAPIView):
     # Device create image hash, device sign image hash, server verifies signature and saves image
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
 
     from .utils import calculate_string_hash
-
+    
     def create(self, request: Request, *args, **kwargs):
+        # Validate incoming request data
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
-            signature = base64.b64decode(request.data.get("image_hash"))
-            image_obj = serializer.validated_data["image"]
-            image_hash = hashlib.sha256(image_obj.read()).hexdigest()
+            # Extract and verify device signature
+            device_signature = base64.b64decode(request.data.get("image_hash"))
+            original_image = serializer.validated_data["image"]
+            original_hash = hashlib.sha256(original_image.read()).hexdigest()
 
             device_name = request.data.get("device_name")
-
             if not device_name:
                 return Response(
                     {"error": "device name is required"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            # Validate device exists
             try:
-                device_key = DeviceKeys.objects.get(name=device_name)
+                device = DeviceKeys.objects.get(name=device_name)
             except DeviceKeys.DoesNotExist:
                 return Response(
                     {"error": "DeviceKeys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            if verify_signature(device_key.public_key, signature, image_hash.encode()):
-                # Save the original image first
-                image_object = serializer.save(
-                    device_key=device_key, verified=False, image_hash=image_hash
-                )
-
-                # Make the certificate, sign the certificate
-                certificate = create_certificate(image_object, device_key)
-                signed_certificate = encrypt_string(
-                    certificate, settings.SERVER_PUBLIC_KEY
-                )
-
-                certificate_hash = calculate_string_hash(certificate)
-                logger.info(f"signed_certificate: {certificate}")
-
-                final_cert_qr_code = pyqrcode.create(certificate_hash)
-                buffer = io.BytesIO()
-                final_cert_qr_code.png(buffer, scale=8)
-                buffer.seek(0)
-
-                logger.info("d")
-
-                # Create watermarked version with embedded certificate
-                watermarker = WaveletDCTWatermark()
-                watermarked_array = watermarker.fwatermark_image(
-                    original_image=PILImage.open(image_obj),
-                    watermark=PILImage.open(buffer),
-                )
-                watermarked_image = PILImage.fromarray(watermarked_array)
-
-                logger.info("c")
-                # Create a buffer for the watermarked image
-                watermarked_buffer = io.BytesIO()
-                watermarked_image.save(watermarked_buffer, format="PNG")
-                watermarked_buffer.seek(0)
-
-                logger.info("b1")
-
-                metadata_dict = {
-                    "signed_certificate": signed_certificate,
-                }
-
-                logger.info(f"Before Metadata-ing: {type(watermarked_image)}")
-                watermarked_image_with_metadata = add_exif_to_image(
-                    image=watermarked_image, exif_dict=metadata_dict
-                )
-                logger.info(
-                    f"watermarked_image_metadata: {fextract_metadata(watermarked_image_with_metadata)}"
-                )
-
-                logger.info(
-                    f"After Metadata-ing: {type(watermarked_image_with_metadata)}"
-                )
-
-                # Save watermarked version to DJ object
-                dj_wm_img_obj = models.Image(
-                    device_key=device_key,
-                    image=ContentFile(
-                        watermarked_buffer.getvalue(),
-                        name=f"watermarked_{image_object.image.name}",
-                    ),
-                    image_hash=calculate_image_hash(watermarked_image_with_metadata),
-                    original_image_hash=image_hash,
-                    verified=True,
-                )
-
-                logger.info("b2")
-
-                # image_obj.image = ContentFile(fadd_complex_metadata(image_obj.image, metadata_dict))
-                dj_wm_img_obj.save()
-                watermarked_image_with_metadata.save(
-                    Path.cwd() / "media" / "temp" / "abc2.png",
-                    format="PNG",
-                    optimize=True,
-                )
-
-                logger.info("a")
-                # Generate download link
-                download_url = request.build_absolute_uri(
-                    reverse("download-image", kwargs={"image_id": dj_wm_img_obj.id})
-                )
-
+            # Verify device signature
+            if not verify_signature(device.public_key, device_signature, original_hash.encode()):
                 return Response(
-                    {
-                        "message": "Image verified successfully",
-                        "download_url": download_url,
-                    },
-                    status=status.HTTP_200_OK,
+                    {"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST
                 )
+
+            # Save original image
+            original_image_obj = serializer.save(
+                device_key=device, verified=False, image_hash=original_hash
+            )
+
+            # Generate and encrypt certificate
+            image_certificate = create_certificate(original_image_obj, device)
+            encrypted_certificate = encrypt_string(
+                image_certificate, settings.SERVER_PUBLIC_KEY
+            )
+            certificate_hash = calculate_string_hash(image_certificate)
+
+            # Generate QR code from certificate hash
+            qr_code = pyqrcode.create(certificate_hash)
+            qr_buffer = io.BytesIO()
+            qr_code.png(qr_buffer, scale=8)
+            qr_buffer.seek(0)
+
+            # Create watermarked version with embedded QR code
+            watermarker = WaveletDCTWatermark()
+            watermarked_image_array = watermarker.fwatermark_image(
+                original_image=PILImage.open(original_image),
+                watermark=PILImage.open(qr_buffer),
+            )
+
+            # Add certificate metadata to watermarked image
+            metadata = {
+                "0th": {
+                    piexif.ImageIFD.Make: encrypted_certificate.encode(),
+                }
+            }
+            watermarked_image, image_buffer = add_exif_to_array_image(
+                array=watermarked_image_array, exif_dict=metadata
+            )
+
+            # Save watermarked version
+            watermarked_image_obj = models.Image(
+                device_key=device,
+                image=ContentFile(
+                    image_buffer.getvalue(),
+                    name=f"watermarked_{original_image_obj.image.name}",
+                ),
+                image_hash=calculate_image_hash(watermarked_image),
+                original_image_hash=original_hash,
+                verified=True,
+            )
+            watermarked_image_obj.save()
+
+            # Generate download URL for watermarked image
+            download_url = request.build_absolute_uri(
+                reverse("download-image", kwargs={"image_id": watermarked_image_obj.id})
+            )
+
             return Response(
-                {"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST
+                {
+                    "message": "Image verified successfully",
+                    "download_url": download_url,
+                },
+                status=status.HTTP_200_OK,
             )
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ImageVerifier(APIView):
+    def post(self, request: Request):
+        image_id = request.data.get('image_id')
+        
+        logger.info(f"image_id: {image_id}")
+        image = Image.objects.get(id=image_id)
+        
+        metadata = extract_exif_data(PILImage.open(image.image))
+        signed_certificate = metadata['0th'][271]
+        logger.info(f"signed_certificate: {signed_certificate}")
+
+        certificate = decrypt_string(signed_certificate, settings.SERVER_PRIVATE_KEY)
+        logger.info(f"certificate: {certificate}")
+
+        certificate_hash = calculate_string_hash(certificate)
+        logger.info(f"certificate_hash: {certificate_hash}")
+
+        deserialized_certificate, length = deserialize_certificate(certificate.encode())
+        logger.info(f"deserialized_certificate: {deserialized_certificate}")
+
+        watermarker = WaveletDCTWatermark()
+        watermarker.recover_watermark(image.image.path)
+
+        return Response({"message": "Not a OMKARRRRR"}, status=200)
+    
 class ImageLinkProvider(APIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
