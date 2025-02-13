@@ -21,6 +21,9 @@ setup: venv  ## Install project dependencies
 	poetry config virtualenvs.in-project true
 	$(POETRY) install --no-root
 
+test:  ## Run tests
+	$(PYTHON) manage.py test
+
 start:  ## Start the development server
 	$(POETRY) run python manage.py runserver
 
