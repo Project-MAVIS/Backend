@@ -38,3 +38,6 @@ pre-commit = "^4.1.0"
 ipykernel = "^6.29.5"
 ipython = "^8.31.0"
 requests = "^2.32.3"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.4"
