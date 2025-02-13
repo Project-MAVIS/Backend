@@ -1,12 +1,12 @@
 from django.test import TestCase
+from rest_framework.test import APITestCase
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
-from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APITestCase
 from rest_framework import status
 
 from .utils import *
+from .watermark import WaveletDCTWatermark
 
 
 class UtilsTests(TestCase):
@@ -66,5 +66,14 @@ class UtilsTests(TestCase):
 class EndpointTests(APITestCase):
     def test_ping(self):
         response = self.client.get(reverse("ping"))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, "pong")
+
+
+class WatermarkerTests(TestCase):
+
+    def __init__(self, *args, **kwargs):
+        self.watermarker = WaveletDCTWatermark()
+        self.image = Image.open("data/samples/jpeg/Wadapav.jpeg")
+
+

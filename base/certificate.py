@@ -134,6 +134,7 @@ def serialize_certificate(cert: ImageCertificate) -> bytes:
 
     return header + variable_fields
 
+
 # TODO: Fix deserialize certificate error (not working)
 def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
     """
