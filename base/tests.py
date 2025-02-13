@@ -1,6 +1,11 @@
 from django.test import TestCase
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APITestCase
+from rest_framework import status
+
 from .utils import *
 
 
@@ -56,3 +61,10 @@ class UtilsTests(TestCase):
             calculate_string_hash("Project MAVIS"),
             "d33aeb62f8d14f71f6b847594c5023d473040edbdf8bf839f15bf110c2cb2999",
         )
+
+
+class EndpointTests(APITestCase):
+    def test_ping(self):
+        response = self.client.get(reverse("ping"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, "pong")

@@ -27,11 +27,6 @@ test:  ## Run tests
 start:  ## Start the development server
 	$(POETRY) run python manage.py runserver
 
-clean:  ## Remove virtual environment and cache
-	rm -rf $(VENV_NAME)
-	rm -rf __pycache__
-	rm -rf *.pyc
-
 clean:  ## Remove Python file artifacts and cache directories
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.py[co]" -delete
@@ -52,9 +47,6 @@ lint:  ## Run linting checks
 	$(POETRY) run black . --check
 	$(POETRY) run isort . --check
 	$(POETRY) run mypy .
-
-test:  ## Run tests
-	$(POETRY) run pytest
 
 coverage:  ## Run tests with coverage report
 	$(POETRY) run pytest --cov=./ --cov-report=term-missing
