@@ -6,6 +6,10 @@ from scipy.fftpack import dct, idct
 from pathlib import Path
 from backend.logging_utils import get_verbose_logger
 
+import cv2
+
+# from pyzbar.pyzbar import decode
+
 logger = get_verbose_logger("server_log")
 
 
@@ -505,18 +509,121 @@ class WaveletDCTWatermark:
     #         results = []
     #         for qr in qr_codes:
     #             # Convert bytes to string
-    #             data = qr.data.decode('utf-8')
-    #             results.append({
-    #                 'data': data,
-    #                 'type': qr.type,
-    #                 'position': qr.rect
-    #             })
+    #             data = qr.data.decode("utf-8")
+    #             results.append({"data": data, "type": qr.type, "position": qr.rect})
 
     #         return results
 
     #     except Exception as e:
     #         logger.info(f"Error reading QR code: {str(e)}")
     #         raise e
+
+    # def fread_qr_code(pil_image: Image.Image):
+    #     try:
+    #         # Convert PIL image to OpenCV format (numpy array)
+    #         image = np.array(pil_image)
+
+    #         # Convert to grayscale
+    #         gray = cv2.cvtColor(
+    #             image, cv2.COLOR_RGB2GRAY
+    #         )  # Use RGB since PIL loads in RGB format
+
+    #         # Decode QR codes
+    #         qr_codes = decode(gray)
+
+    #         if not qr_codes:
+    #             logger.info("No QR codes found in the image")
+    #             return []
+
+    #         results = []
+    #         for qr in qr_codes:
+    #             # Convert bytes to string
+    #             data = qr.data.decode("utf-8")
+    #             results.append({"data": data, "type": qr.type, "position": qr.rect})
+
+    #         return results
+
+    #     except Exception as e:
+    #         logger.info(f"Error reading QR code: {str(e)}")
+    #         raise e
+
+    def read_qr_code_cv2(self, image_path):
+        """Alternative QR code reader using OpenCV's QR detector.
+
+        This method provides a backup QR code reading implementation using
+        pure OpenCV, which may work better on some systems where ZBar fails.
+
+        Args:
+            image_path (str): Path to the image containing QR code
+
+        Returns:
+            list: List of dictionaries containing detected QR code data
+        """
+        try:
+            # Read the image
+            image = cv2.imread(str(image_path))
+
+            if image is None:
+                raise ValueError(f"Could not read image at {image_path}")
+
+            # Initialize QR Code detector
+            qr_detector = cv2.QRCodeDetector()
+
+            # Detect and decode QR code
+            data, bbox, straight_qrcode = qr_detector.detectAndDecode(image)
+
+            if data:
+                return [
+                    {
+                        "data": data,
+                        "type": "QR",
+                        "position": bbox[0] if bbox is not None else None,
+                    }
+                ]
+            else:
+                logger.info("No QR codes found in the image")
+                return []
+
+        except Exception as e:
+            logger.error(f"Error reading QR code with OpenCV: {str(e)}")
+            raise
+
+    def fread_qr_code_cv2(self, pil_image: Image.Image):
+        """Alternative QR code reader using OpenCV's QR detector for PIL images.
+
+        Similar to read_qr_code_cv2() but takes a PIL Image directly instead of a file path.
+
+        Args:
+            pil_image (PIL.Image.Image): PIL Image object containing QR code
+
+        Returns:
+            list: List of dictionaries containing detected QR code data
+        """
+        try:
+            # Convert PIL image to OpenCV format
+            image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+
+            # Initialize QR Code detector
+            qr_detector = cv2.QRCodeDetector()
+
+            # Detect and decode QR code
+            data, bbox, straight_qrcode = qr_detector.detectAndDecode(image)
+
+            if data:
+                return [
+                    {
+                        "data": data,
+                        "type": "QR",
+                        "position": bbox[0] if bbox is not None else None,
+                    }
+                ]
+            else:
+                logger.info("No QR codes found in the image")
+                return []
+
+        except Exception as e:
+            logger.error(f"Error reading QR code with OpenCV: {str(e)}")
+            raise
 
 
 # def main():

@@ -190,7 +190,7 @@ def calculate_image_hash(image: Image):
     # Calculate and return SHA-256 hash
     hash = hashlib.sha256(img_byte_arr).hexdigest()
     logger.V(4).info(f"Image hash: {hash}")
-    return
+    return hash
 
 
 def calculate_string_hash(input_string: str) -> str:

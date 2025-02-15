@@ -134,7 +134,14 @@ def fextract_metadata(img: PILImage.Image):
 
 
 def extract_exif_data(img: PILImage.Image):
-    return piexif.load(img.info["exif"])
+    try:
+        return piexif.load(img.info["exif"])
+    except KeyError:
+        logger.warning("No EXIF data found in image")
+        return None
+    except Exception as e:
+        logger.error(f"Error extracting EXIF data: {str(e)}")
+        return None
 
 
 # metadata = {

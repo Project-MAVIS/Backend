@@ -162,7 +162,7 @@ class ImageUploadView(generics.CreateAPIView):
 
         try:
             # Get the device-signed image hash
-            dev_signed_img_hash = base64.b64decode(request.data.get("signed_img_hash"))
+            dev_signed_img_hash = base64.b64decode(request.data.get("image_hash"))
             logger.V(3).info(f"dev_signed_img_hash: {dev_signed_img_hash}")
 
             # Get the image object
@@ -234,6 +234,8 @@ class ImageUploadView(generics.CreateAPIView):
                     f"watermarked_image_metadata: {extract_exif_data(watermarked_img_w_metadata)}"
                 )
 
+                new_hash = calculate_image_hash(watermarked_img_w_metadata)
+
                 # Save watermarked version to db
                 watermarked_image_obj = models.Image(
                     device_key=device_key,
@@ -241,7 +243,7 @@ class ImageUploadView(generics.CreateAPIView):
                         image_buffer.getvalue(),
                         name=f"{device_key.name}_watermarked_image_{random.randint(1,1000000)}.png",
                     ),
-                    image_hash=calculate_image_hash(watermarked_img_w_metadata),
+                    image_hash=new_hash,
                     original_image_hash=image_hash,
                     verified=True,
                 )
@@ -316,10 +318,15 @@ class ImageVerifierView(APIView):
         logger.info(f"deserialized_certificate: {deserialized_certificate}")
 
         watermarker = WaveletDCTWatermark()
-        watermarker.recover_watermark(image.image.path)
+        watermark_arr = watermarker.frecover_watermark(PILImage.open(image.image))
+        watermark_img = PILImage.fromarray(watermark_arr)
+
+        data = watermarker.fread_qr_code_cv2(watermark_img)
+
+        logger.V(3).info(data)
 
         # ! TODO: Provide proper response
-        return Response({"message": "Not a OMKARRRRR"}, status=200)
+        return Response({"message": "Not a SHANTYYY", "sadntanu": data}, status=200)
 
 
 # TODO: FIX THIS
