@@ -1,5 +1,5 @@
 import logging
-from typing import cast
+from typing import cast, Any
 
 # Define custom logging levels
 VERBOSE1 = 25
@@ -30,12 +30,18 @@ class VerbosityLogger(logging.Logger):
 
 
 class VerbosityAdapter:
-    def __init__(self, logger, level):
+    def __init__(self, logger: VerbosityLogger, level: int) -> None:
         self.logger = logger
         self.level = level
 
-    def info(self, msg, *args, **kwargs):
-        """Log with custom verbosity level"""
+    def info(self, msg: Any, *args: Any, **kwargs: Any) -> None:
+        """Log with custom verbose level
+
+        Args:
+            msg: The message to log
+            *args: Variable length argument list
+            **kwargs: Arbitrary keyword arguments
+        """
         # Calculate the actual logging level based on verbosity
         if self.level == 1:
             level = VERBOSE1
@@ -51,6 +57,16 @@ class VerbosityAdapter:
             level = logging.INFO
 
         self.logger.log(level, msg, *args, **kwargs)
+
+    def error(self, msg: Any, *args: Any, **kwargs: Any) -> None:
+        """Log an error message (always shown regardless of verbosity level)
+
+        Args:
+            msg: The message to log
+            *args: Variable length argument list
+            **kwargs: Arbitrary keyword arguments
+        """
+        self.logger.error(msg, *args, **kwargs)
 
 
 class VerbosityFilter(logging.Filter):

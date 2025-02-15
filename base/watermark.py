@@ -1,16 +1,12 @@
 # Basic whatsapp image resilience works, image manipulation at least on whats app is not working yet
-import logging
 import numpy as np
 import pywt
 from PIL import Image
 from scipy.fftpack import dct, idct
 from pathlib import Path
+from backend.logging_utils import get_verbose_logger
 
-import cv2
-
-# from pyzbar.pyzbar import decode
-
-logger = logging.getLogger("server_log")
+logger = get_verbose_logger("server_log")
 
 
 class WaveletDCTWatermark:
@@ -72,7 +68,7 @@ class WaveletDCTWatermark:
 
             return image_array
         except Exception as e:
-            logger.info(f"Error processing image {image_path}: {str(e)}")
+            logger.error(f"Error processing image {image_path}: {str(e)}")
             raise
 
     def fconvert_image(self, image: Image.Image, size, to_grayscale=False):
@@ -187,7 +183,7 @@ class WaveletDCTWatermark:
                 coeffs = pywt.wavedec2(data=image_array, wavelet=model, level=level)
                 return list(coeffs)
         except Exception as e:
-            logger.info(f"Error processing coefficients: {str(e)}")
+            logger.error(f"Error processing coefficients: {str(e)}")
             raise
 
     def embed_watermark(self, watermark_array, orig_image):
@@ -209,7 +205,7 @@ class WaveletDCTWatermark:
 
             return orig_image
         except Exception as e:
-            logger.info(f"Error embedding watermark: {str(e)}")
+            logger.error(f"Error embedding watermark: {str(e)}")
             raise
 
     def get_watermark(self, dct_watermarked_coeff, watermark_size):
@@ -232,7 +228,7 @@ class WaveletDCTWatermark:
             watermark = self.enhance_recovered_watermark(watermark)
             return watermark
         except Exception as e:
-            logger.info(f"Error extracting watermark: {str(e)}")
+            logger.error(f"Error extracting watermark: {str(e)}")
             raise
 
     def enhance_recovered_watermark(self, watermark):

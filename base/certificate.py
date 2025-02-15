@@ -6,6 +6,7 @@ from .models import Image, DeviceKeys
 from django.contrib.auth.models import User
 
 from backend.logging_utils import get_verbose_logger
+
 logger = get_verbose_logger("server_log")
 
 
@@ -58,6 +59,7 @@ def calculate_cert_length(username: str, device_name: str) -> int:
 
     # Total length is fixed fields plus variable length strings
     total_length = fixed_fields_length + username_bytes + device_name_bytes
+    logger.V(4).info(f"Total Certificate length: {total_length}")
 
     return total_length
 
@@ -84,8 +86,7 @@ def create_certificate(
     )
 
     serialized_data = serialize_certificate(cert)
-    # print(serialized_data)
-    print(f"certificate: {serialized_data.hex()}")
+    logger.V(4).info(f"Serialized certificate (hex): {serialized_data.hex()}")
 
     return serialized_data.hex()
 
@@ -177,6 +178,8 @@ def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
         username=username,
         device_name=device_name,
     )
+
+    logger.V(4).info(f"Deserialized certificate: {certificate}")
 
     return certificate, device_name_end
 

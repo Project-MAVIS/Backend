@@ -51,7 +51,7 @@ logger = get_verbose_logger("server_log")
 
 @api_view(["GET"])
 def ping(_) -> Response:
-    logger.info("ping")
+    logger.V(4).info("LOG")
     return Response("pong")
 
 
