@@ -66,10 +66,10 @@ def create_certificate(
     image: Image, device_key: DeviceKeys, timestamp: int = int(time.time())
 ) -> str:
     user: User = image.device_key.user
-    time_stamp = hex(timestamp)
-    image_id = hex(image.id)
-    user_id = hex(image.id)
-    device_key_id = hex(image.id)
+    time_stamp = timestamp
+    image_id = image.id
+    user_id = user.id
+    device_key_id = device_key.id
     user_name = user.username
     device_name = device_key.name
 
@@ -116,11 +116,11 @@ def serialize_certificate(cert: ImageCertificate) -> bytes:
     # Pack fixed-length fields
     header = struct.pack(
         ">BQQII",  # > for big-endian, B=uint8, Q=uint64, I=uint32
-        cert.cert_len,
-        cert.timestamp,
-        cert.image_id,
-        cert.user_id,
-        cert.device_id,
+        int(cert.cert_len & 0xFF),  # 8 bits
+        int(cert.timestamp & 0xFFFFFFFFFFFFFFFF),  # 64 bits
+        int(cert.image_id & 0xFFFFFFFFFFFFFFFF),  # 64 bits
+        int(cert.user_id & 0xFFFFFFFF),  # 32 bits
+        int(cert.device_id & 0xFFFFFFFF),  # 32 bits
     )
 
     # Pack variable-length fields
@@ -135,7 +135,6 @@ def serialize_certificate(cert: ImageCertificate) -> bytes:
     return header + variable_fields
 
 
-# TODO: Fix deserialize certificate error (not working)
 def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
     """
     Deserialize bytes into an ImageCertificate object.
@@ -149,7 +148,14 @@ def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
         fixed_format, data[:fixed_size]
     )
 
-    print("Deserializer info: ", cert_len, timestamp, image_id, user_id, device_id)
+    print(
+        "Deserializer info: ",
+        cert_len,
+        timestamp,
+        image_id,
+        user_id,
+        device_id,
+    )
     # Get username length and username
     username_length = data[fixed_size]
     username_start = fixed_size + 1
