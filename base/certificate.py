@@ -148,7 +148,7 @@ def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
         fixed_format, data[:fixed_size]
     )
 
-    print(
+    logger.V(3).info(
         "Deserializer info: ",
         cert_len,
         timestamp,

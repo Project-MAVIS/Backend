@@ -53,6 +53,7 @@ logger = logging.getLogger("server_log")
 
 @api_view(["GET"])
 def ping(_) -> Response:
+    logger.info("ping")
     return Response("pong")
 
 
@@ -71,11 +72,18 @@ class RegisterUserView(generics.CreateAPIView):
 
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+
+        logger.V(3).info(f"serializer: {serializer}")
+        logger.V(3).info(f"request data: {request.data}")
+
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
         # Generate and save key pair
         private_key, public_key = generate_key_pair()
+
+        logger.V(3).info(f"private key: {private_key}")
+
         DeviceKeys.objects.create(
             user=user,
             private_key=private_key,
@@ -131,11 +139,8 @@ class ImageVerifyView(generics.CreateAPIView):
             hash = watermarker.read_qr_code(
                 f"{settings.MEDIA_ROOT}/result/recovered_watermark.jpg"
             )
-            logger.info(2)
 
             values = Image.objects.filter(image_hash=hash[0]["data"])
-
-            logger.info(3)
 
             # Return a success response
             if len(values) >= 1:
@@ -158,11 +163,17 @@ class ImageUploadView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            signature = base64.b64decode(request.data.get("image_hash"))
+            # Get the device-signed image hash
+            dev_signed_img_hash = base64.b64decode(request.data.get("signed_img_hash"))
+            logger.V(3).info(f"dev_signed_img_hash: {dev_signed_img_hash}")
+
+            # Get the image object
             image_obj = serializer.validated_data["image"]
             image_hash = hashlib.sha256(image_obj.read()).hexdigest()
+            logger.V(3).info(f"calculated image hash: {image_hash}")
 
             device_name = request.data.get("device_name")
+            logger.V(3).info(f"device_name: {device_name}")
 
             if not device_name:
                 return Response(
@@ -177,7 +188,9 @@ class ImageUploadView(generics.CreateAPIView):
                     {"error": "DeviceKeys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            if verify_signature(device_key.public_key, signature, image_hash.encode()):
+            if verify_signature(
+                device_key.public_key, dev_signed_img_hash, image_hash.encode()
+            ):
                 # Save the original image first
                 image_object = serializer.save(
                     device_key=device_key, verified=False, image_hash=image_hash
@@ -185,11 +198,14 @@ class ImageUploadView(generics.CreateAPIView):
 
                 # Make the certificate, sign the certificate
                 img_cert = create_certificate(image_object, device_key)
+                logger.V(3).info(f"img_cert: {img_cert}")
+
                 enc_img_cert = encrypt_string(img_cert, settings.SERVER_PUBLIC_KEY)
+                logger.V(3).info(f"enc_img_cert: {enc_img_cert}")
 
                 # Calculate the hash of the certificate
                 cert_hash = calculate_string_hash(img_cert)
-                logger.info(f"signed_certificate: {img_cert}")
+                logger.V(3).info(f"cert_hash: {cert_hash}")
 
                 # Create the QR code
                 final_cert_qr_code = pyqrcode.create(cert_hash)
@@ -215,7 +231,8 @@ class ImageUploadView(generics.CreateAPIView):
                     array=watermarked_img_array, exif_dict=metadata
                 )
 
-                logger.info(
+                # Just to verify the metadata is added correctly
+                logger.V(3).info(
                     f"watermarked_image_metadata: {extract_exif_data(watermarked_img_w_metadata)}"
                 )
 
@@ -238,6 +255,10 @@ class ImageUploadView(generics.CreateAPIView):
                     Path.cwd() / "media" / "temp" / watermarked_image_obj.image.name,
                     format="PNG",
                     optimize=True,
+                )
+
+                logger.V(3).info(
+                    f"Watermarked Image Saved Path: {watermarked_image_obj.image.path}"
                 )
 
                 # Generate download link

@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from base.utils import initialize_server_keys
 import os
+import argparse
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,21 +37,22 @@ except ValueError as e:
     print(e)
     # exit(1)
 
-# LOGGING = {
-#     "version": 1,
-#     "disable_existing_loggers": False,
-#     "handlers": {
-#         "console": {
-#             "class": "logging.StreamHandler",
-#         },
-#     },
-#     "loggers": {
-#         "django": {
-#             "handlers": ["console"],
-#             "level": "DEBUG",
-#         },
-#     },
-# }
+# Default verbosity level
+DEFAULT_VERBOSITY = 1
+
+# Get verbosity level from command line
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-v",
+    "--verbosity",
+    type=int,
+    default=DEFAULT_VERBOSITY,
+    help="Logging verbosity level (1-5)",
+)
+# Only parse known args to avoid conflicts with Django's manage.py
+args, _ = parser.parse_known_args()
+VERBOSITY_LEVEL = args.verbosity
+
 LOG_FILE_PATH = os.path.join(BASE_DIR, "logs", "server.log")
 
 # Ensure the directory exists
@@ -62,20 +65,28 @@ LOGGING = {
     "formatters": {
         "standard": {
             "format": "[%(asctime)s] %(levelname)s %(name)s: %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",  # Set the date format here
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "filters": {
+        "verbosity_filter": {
+            "()": "backend.logging_utils.VerbosityFilter",
+            "verbosity_level": VERBOSITY_LEVEL,
         },
     },
     "handlers": {
         "file": {
-            "level": "INFO",
+            "level": "DEBUG",  # Set to DEBUG to allow all verbose messages
             "class": "logging.FileHandler",
             "filename": LOG_FILE_PATH,
             "formatter": "standard",
+            "filters": ["verbosity_filter"],
         },
         "console": {
-            "level": "DEBUG",
+            "level": "DEBUG",  # Set to DEBUG to allow all verbose messages
             "class": "logging.StreamHandler",
             "formatter": "standard",
+            "filters": ["verbosity_filter"],
         },
     },
     "loggers": {
