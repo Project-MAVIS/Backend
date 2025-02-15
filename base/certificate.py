@@ -1,4 +1,3 @@
-import logging
 import struct
 import time
 from dataclasses import dataclass
@@ -6,7 +5,8 @@ from typing import Tuple
 from .models import Image, DeviceKeys
 from django.contrib.auth.models import User
 
-logger = logging.getLogger("server_log")
+from backend.logging_utils import get_verbose_logger
+logger = get_verbose_logger("server_log")
 
 
 @dataclass

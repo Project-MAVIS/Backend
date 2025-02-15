@@ -15,9 +15,6 @@ from django.http import FileResponse, HttpResponse
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 
-# from django.core.files import Files
-
-
 # Django REST Framework
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -47,8 +44,9 @@ from .watermark import WaveletDCTWatermark
 from .certificate import *
 from .metadata import *
 from . import models
+from backend.logging_utils import get_verbose_logger
 
-logger = logging.getLogger("server_log")
+logger = get_verbose_logger("server_log")
 
 
 @api_view(["GET"])
@@ -292,7 +290,7 @@ class ImageVerifierView(APIView):
                 {"error": "image_id is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        logger.info(f"image_id: {image_id}")
+        logger.V(3).info(f"image_id: {image_id}")
         image = Image.objects.get(id=image_id)
 
         if not image:
