@@ -35,6 +35,7 @@ import pyqrcode
 import numpy as np
 import piexif
 from PIL import Image as PILImage
+from PIL.ExifTags import TAGS
 
 # Local imports
 from .models import DeviceKeys, Image
@@ -255,6 +256,7 @@ class ImageUploadView(generics.CreateAPIView):
                     Path.cwd() / "media" / "temp" / watermarked_image_obj.image.name,
                     format="PNG",
                     optimize=True,
+                    exif=piexif.dump(metadata),
                 )
 
                 logger.V(3).info(
@@ -603,20 +605,18 @@ class GenerateQRView(generics.CreateAPIView):
         Generate QR code from the first half of a hash value
         """
 
-        # Get hash from request
-        hash_value = request.data.get("hash")
+        # Get string from request
+        string_value = request.data.get("string")
 
-        if not hash_value:
+        if not string_value:
             return Response(
-                {"error": "Hash value is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "String value is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            # Get first half of hash
-            half_hash = hash_value[: len(hash_value) // 2]
-
             # Create QR code
-            qr = pyqrcode.create(half_hash)
+            qr = pyqrcode.create(string_value)
 
             # Create a bytes buffer to store the PNG
             buffer = io.BytesIO()
@@ -731,5 +731,39 @@ class WatermarkRecoveryView(generics.CreateAPIView):
         except Exception as e:
             return Response(
                 {"error": f"Error in watermark recovery process: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ImageExifView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request: Request):
+        """
+        Extract EXIF data from an uploaded image
+        """
+        try:
+            # Check if image file is in request
+            if "image" not in request.FILES:
+                return Response(
+                    {"error": "No image file provided"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            image_file = request.FILES["image"]
+
+            # Open image with PIL
+            img = PILImage.open(image_file)
+
+            exif_data = extract_exif_data(img)
+
+            return Response(
+                {"message": "EXIF data extracted successfully", "exif_data": exif_data},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error extracting EXIF data: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

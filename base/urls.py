@@ -22,4 +22,5 @@ urlpatterns = [
     path('watermark-image/', views.WatermarkImageView.as_view(), name='watermark-image'),
     path('recover-watermark/', views.WatermarkRecoveryView.as_view(), name='recover-watermark'),
     path('truncate', views.truncate, name="truncate"),
+    path('extract-exif/', views.ImageExifView.as_view(), name='extract-exif'),
 ]
