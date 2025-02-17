@@ -1,9 +1,11 @@
+import datetime
 import hashlib
 from PIL import Image as PILImage
 import json
 import numpy as np
 import piexif
 from io import BytesIO
+from exif import Image as ExifImage
 from backend.logging_utils import get_verbose_logger
 
 logger = get_verbose_logger("server_log")
@@ -135,13 +137,48 @@ def fextract_metadata(img: PILImage.Image):
 
 def extract_exif_data(img: PILImage.Image):
     try:
-        return piexif.load(img.info["exif"])
+        exif_data = piexif.load(img.info.get("exif", b""))
+
+        # Convert bytes to string for JSON serialization
+        for ifd in exif_data:
+            if ifd in ("0th", "1st", "Exif", "GPS", "Interop"):
+                for key in exif_data[ifd]:
+                    if isinstance(exif_data[ifd][key], bytes):
+                        exif_data[ifd][key] = exif_data[ifd][key].decode(
+                            "utf-8", errors="ignore"
+                        )
+
+        return exif_data
     except KeyError:
         logger.warning("No EXIF data found in image")
         return None
     except Exception as e:
         logger.error(f"Error extracting EXIF data: {str(e)}")
         return None
+
+
+def extract_exif_data_2(img_file: bytes):
+    img = ExifImage(img_file)
+    if not img.has_exif:
+        print(f"[+] Skipping file because it does not have EXIF metadata")
+    else:
+        dict_i = {}
+
+        attr_list = img.list_all()
+        for attr in attr_list:
+            value = img.get(attr)
+            dict_i[attr] = value
+
+        # Convert bytes to string for JSON serialization
+        for key, value in dict_i.items():
+            if isinstance(value, bytes):
+                dict_i[key] = value.decode("utf-8")
+            elif isinstance(value, (datetime.datetime, datetime.date)):
+                dict_i[key] = value.isoformat()
+            elif not isinstance(value, (str, int, float, bool, type(None))):
+                dict_i[key] = str(value)
+
+        return dict_i
 
 
 # metadata = {
