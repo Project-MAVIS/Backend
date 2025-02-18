@@ -30,37 +30,9 @@ def add_exif_to_array_image(
     img.save(final_buffer, format="PNG", exif=exif_bytes)
     final_buffer.seek(0)
 
-    logger.V(4).info("Added EXIF to array image")
+    logger.V(2).info("Added EXIF to array image")
     # Return the final image
     return (PILImage.open(final_buffer), final_buffer)
-
-
-def verify_hash(file_path):
-    digest = hashlib.sha256()
-
-    img = PILImage.open(file_path)
-    img_arr = np.array(img)
-
-    first_row = img_arr[0, :, :]
-    rest = img_arr[1:, :, :]
-
-    rest_bytes = rest.tobytes()
-    digest = hashlib.sha256(rest_bytes).hexdigest()
-
-    binary_hash = "".join(f"{int(char, 16):04b}" for char in digest)
-    binary_hash = binary_hash[: first_row.size * 4]
-
-    embedded_hash = ""
-    for i, (r, g, b, a) in enumerate(first_row):
-        embedded_hash += str(b & 1)
-        if i == 255:
-            break
-
-    for i in range(len(binary_hash)):
-        if embedded_hash[i] != binary_hash[i]:
-            return False
-
-    return True
 
 
 def add_complex_metadata(file_path, metadata_dict):
@@ -135,7 +107,16 @@ def fextract_metadata(img: PILImage.Image):
         return None
 
 
-def extract_exif_data(img: PILImage.Image):
+def extract_exif_data_PIEXIF(img: PILImage.Image):
+    """
+    Extracts EXIF data from an image using the PILImage.Image object and the piexif library.
+
+    Args:
+        img (PILImage.Image): The image object to extract EXIF data from.
+
+    Returns:
+        dict: A dictionary containing the EXIF data.
+    """
     try:
         exif_data = piexif.load(img.info.get("exif", b""))
 
@@ -157,7 +138,15 @@ def extract_exif_data(img: PILImage.Image):
         return None
 
 
-def extract_exif_data_2(img_file: bytes):
+def extract_exif_data_EXIF(img_file: bytes):
+    """
+    Extracts EXIF data from an image using the exif library.
+
+    Args:
+        img_file (bytes): The image file to extract EXIF data from.
+
+    Returns:
+    """
     img = ExifImage(img_file)
     if not img.has_exif:
         print(f"[+] Skipping file because it does not have EXIF metadata")
@@ -179,21 +168,3 @@ def extract_exif_data_2(img_file: bytes):
                 dict_i[key] = str(value)
 
         return dict_i
-
-
-# metadata = {
-#     "Author": "Omkar",
-#     "Description": "This is an example image with complex metadata.",
-#     "Project": {
-#         "Name": "Provenance_Addition",
-#         "Version": "1.0",
-#         "HashAlgorithm": "SHA-256",
-#     },
-#     "Timestamp": "2024-12-06T12:00:00Z",
-# }
-
-# file_path = "./media/testing/omkar_gate_mod.png"
-# file_path_mod = "./media/testing/omkar_test.jpeg"
-
-# # add_complex_metadata(file_path, metadata)
-# print(extract_metadata(file_path_mod))

@@ -38,7 +38,7 @@ except ValueError as e:
     # exit(1)
 
 # Default verbosity level
-DEFAULT_VERBOSITY = 1
+DEFAULT_VERBOSITY = 0
 
 # Get verbosity level from command line
 parser = argparse.ArgumentParser()

@@ -59,7 +59,7 @@ def calculate_cert_length(username: str, device_name: str) -> int:
 
     # Total length is fixed fields plus variable length strings
     total_length = fixed_fields_length + username_bytes + device_name_bytes
-    logger.V(4).info(f"Total Certificate length: {total_length}")
+    logger.V(2).info(f"Total Certificate length: {total_length}")
 
     return total_length
 
@@ -86,7 +86,7 @@ def create_certificate(
     )
 
     serialized_data = serialize_certificate(cert)
-    logger.V(4).info(f"Serialized certificate (hex): {serialized_data.hex()}")
+    logger.V(2).info(f"Serialized certificate (hex): {serialized_data.hex()}")
 
     return serialized_data.hex()
 
@@ -149,7 +149,7 @@ def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
         fixed_format, data[:fixed_size]
     )
 
-    logger.V(3).info(
+    logger.V(2).info(
         "Deserializer info: ",
         cert_len,
         timestamp,
@@ -179,7 +179,7 @@ def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
         device_name=device_name,
     )
 
-    logger.V(4).info(f"Deserialized certificate: {certificate}")
+    logger.V(2).info(f"Deserialized certificate: {certificate}")
 
     return certificate, device_name_end
 

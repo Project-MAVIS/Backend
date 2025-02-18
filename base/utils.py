@@ -39,8 +39,8 @@ def generate_key_pair():
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
 
-    logger.V(4).info(f"Private key: {private_pem.decode()}")
-    logger.V(4).info(f"Public key: {public_pem.decode()}")
+    logger.V(2).info(f"Private key: {private_pem.decode()}")
+    logger.V(2).info(f"Public key: {public_pem.decode()}")
 
     return private_pem.decode(), public_pem.decode()
 
@@ -80,7 +80,7 @@ def encrypt_string(plain_text: str, public_key: rsa.RSAPublicKey) -> str:
 
     # Encode the encrypted bytes in base64 to make it string-friendly
     encrypted_base64 = base64.b64encode(encrypted_bytes)
-    logger.V(4).info(f"Encrypted base64: {encrypted_base64.decode('utf-8')}")
+    logger.V(2).info(f"Encrypted base64: {encrypted_base64.decode('utf-8')}")
 
     return encrypted_base64.decode("utf-8")
 
@@ -96,7 +96,7 @@ def decrypt_string(encrypted_text: str, private_key: PrivateKeyTypes) -> str:
             label=None,
         ),
     )
-    logger.V(4).info(f"Decrypted bytes: {decrypted_bytes.decode('utf-8')}")
+    logger.V(2).info(f"Decrypted bytes: {decrypted_bytes.decode('utf-8')}")
     return decrypted_bytes.decode("utf-8")
 
 
@@ -189,7 +189,7 @@ def calculate_image_hash(image: Image):
 
     # Calculate and return SHA-256 hash
     hash = hashlib.sha256(img_byte_arr).hexdigest()
-    logger.V(4).info(f"Image hash: {hash}")
+    logger.V(2).info(f"Image hash: {hash}")
     return hash
 
 
@@ -207,7 +207,7 @@ def calculate_string_hash(input_string: str) -> str:
 
     # Encode string to bytes and calculate hash
     hash = hashlib.sha256(input_string.encode()).hexdigest()
-    logger.V(4).info(f"String hash: {hash}")
+    logger.V(2).info(f"String hash: {hash}")
     return hash
 
 
