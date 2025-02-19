@@ -18,4 +18,4 @@ RUN sh scripts/setup.sh
 
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "-l", "3"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000", "-l", "3"]
