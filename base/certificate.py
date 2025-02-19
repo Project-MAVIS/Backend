@@ -146,13 +146,8 @@ def deserialize_certificate(data: bytes) -> Tuple[ImageCertificate, int]:
         fixed_format, data[:fixed_size]
     )
 
-    logger.V(2).info(
-        "Deserializer info: ",
-        cert_len,
-        timestamp,
-        image_id,
-        user_id,
-        device_id,
+    logger.V(3).info(
+        f"cert_len: {cert_len}, timestamp: {timestamp}, image_id: {image_id}, user_id: {user_id}, device_id: {device_id}"
     )
     # Get username length and username
     username_length = data[fixed_size]

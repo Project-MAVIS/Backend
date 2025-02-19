@@ -14,13 +14,16 @@ class VerbosityLogger:
         self._verbosity = max(1, min(8, verbosity))  # Clamp between 1 and 8
         self._current_verbosity = 1
 
-        # Configure logging
-        self._logger = logging.getLogger("django_app")
+        # Configure root logger for Django logs
+        root_logger = logging.getLogger()
+        if root_logger.hasHandlers():
+            root_logger.handlers.clear()
+        root_logger.setLevel(logging.INFO)
 
-        # Clear any existing handlers to prevent duplicate logging
+        # Configure our app logger
+        self._logger = logging.getLogger("django_app")
         if self._logger.hasHandlers():
             self._logger.handlers.clear()
-
         self._logger.setLevel(logging.INFO)
 
         # Create logs directory if it doesn't exist
@@ -35,22 +38,41 @@ class VerbosityLogger:
                 dt = datetime.fromtimestamp(record.created, tz=ist_tz)
                 return dt.strftime(datefmt or "%Y-%m-%d %H:%M:%S %Z")
 
+        # Custom formatter for Django logs
+        class DjangoFormatter(ISTFormatter):
+            def format(self, record):
+                if "django.server" in record.name or "django.request" in record.name:
+                    return record.getMessage()
+                return super().format(record)
+
         file_formatter = ISTFormatter(
             "%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S %Z"
         )
         console_formatter = ISTFormatter("%(asctime)s %(message)s")
+        django_formatter = DjangoFormatter(
+            "%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S %Z"
+        )  # Empty format string as Django provides its own format
 
         # File handler - Change to use server.log
         file_handler = logging.FileHandler(os.path.join(log_dir, "server.log"))
         file_handler.setFormatter(file_formatter)
         self._logger.addHandler(file_handler)
 
-        # Console handler
+        # Django file handler
+        django_file_handler = logging.FileHandler(os.path.join(log_dir, "server.log"))
+        django_file_handler.setFormatter(django_formatter)
+        root_logger.addHandler(django_file_handler)
+
+        # Console handlers
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(console_formatter)
         self._logger.addHandler(console_handler)
 
-        # Prevent propagation to root logger
+        django_console_handler = logging.StreamHandler()
+        django_console_handler.setFormatter(django_formatter)
+        root_logger.addHandler(django_console_handler)
+
+        # Prevent propagation to root logger for our app logger
         self._logger.propagate = False
 
     def V(self, level: int) -> "VerbosityLogger":
