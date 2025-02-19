@@ -145,20 +145,20 @@ class ImageVerifyView(generics.CreateAPIView):
             else:
                 return Response({"status": "Not verified"})
         except Exception as e:
-            logger.V(4).info(f"Error: {e}")
+            logger.error(f"Error: {e}")
             return Response({"message": f"There was an error: {str(e)}"}, status=200)
 
 
 class ImageUploadView(generics.CreateAPIView):
-    # Device create image hash, device sign image hash, server verifies signature and saves image
+    """Device create image hash, device sign image hash, server verifies signature and saves image"""
+
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
-
-    from .utils import calculate_string_hash
 
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        FORMAT = request.data.get("format")
 
         try:
             # Get the device-signed image hash
@@ -229,11 +229,6 @@ class ImageUploadView(generics.CreateAPIView):
                     array=watermarked_img_array, exif_dict=metadata
                 )
 
-                # Just to verify the metadata is added correctly
-                logger.V(3).info(
-                    f"watermarked_image_metadata: {extract_exif_data(watermarked_img_w_metadata)}"
-                )
-
                 new_hash = calculate_image_hash(watermarked_img_w_metadata)
 
                 # Save watermarked version to db
@@ -241,7 +236,7 @@ class ImageUploadView(generics.CreateAPIView):
                     device_key=device_key,
                     image=ContentFile(
                         image_buffer.getvalue(),
-                        name=f"{device_key.name}_watermarked_image_{random.randint(1,1000000)}.png",
+                        name=f"{device_key.name}_watermarked_image_{random.randint(1,1000000)}.{FORMAT}",
                     ),
                     image_hash=new_hash,
                     original_image_hash=image_hash,
@@ -253,7 +248,7 @@ class ImageUploadView(generics.CreateAPIView):
                 # TODO: Migrate this to Azure Blob
                 watermarked_img_w_metadata.save(
                     Path.cwd() / "media" / "temp" / watermarked_image_obj.image.name,
-                    format="PNG",
+                    format=FORMAT,
                     optimize=True,
                     exif=piexif.dump(metadata),
                 )
@@ -274,61 +269,108 @@ class ImageUploadView(generics.CreateAPIView):
                         "message": "Image verified successfully",
                         "download_url": download_url,
                     },
-                    status=status.HTTP_200_OK,
+                    status=status.HTTP_201_CREATED,
                 )
             return Response(
                 {"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         except Exception as e:
-            logger.V(4).info(f"Error: {e}")
+            logger.error(f"Error: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ImageVerifierView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
     def post(self, request: Request):
-        image_id = request.data.get("image_id")
+        try:
+            if "image" not in request.FILES:
+                return Response(
+                    {"error": "Image file is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        if not image_id:
+            image_file = request.FILES["image"]
+            try:
+                pil_image = PILImage.open(image_file)
+            except Exception as e:
+                return Response(
+                    {"error": f"Invalid image file: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                metadata = extract_exif_data_PIEXIF(pil_image)
+                if "0th" not in metadata or 271 not in metadata["0th"]:
+                    return Response(
+                        {"error": "Image does not contain required metadata"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                signed_certificate = metadata["0th"][271]
+            except Exception as e:
+                return Response(
+                    {"error": f"Error extracting metadata: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            logger.V(3).info(f"signed_certificate: {signed_certificate}")
+
+            try:
+                certificate = decrypt_string(
+                    signed_certificate, settings.SERVER_PRIVATE_KEY
+                )
+                logger.V(3).info(f"certificate: {certificate}")
+
+                certificate_hash = calculate_string_hash(certificate)
+                logger.V(3).info(f"certificate_hash: {certificate_hash}")
+
+                deserialized_certificate, length = deserialize_certificate(
+                    # Read the certificate as bytes from hex-encoded string as the certificate is a hex string
+                    bytes.fromhex(certificate)
+                )
+                logger.V(3).info(f"deserialized_certificate: {deserialized_certificate}")
+            except ValueError as e:
+                return Response(
+                    {"error": f"Invalid certificate format: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Error processing certificate: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                watermarker = WaveletDCTWatermark()
+                watermark_arr = watermarker.frecover_watermark(pil_image)
+                watermark_img = PILImage.fromarray(watermark_arr)
+                data = watermarker.fread_qr_code_cv2(watermark_img)
+            except Exception as e:
+                return Response(
+                    {"error": f"Error recovering watermark: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            logger.V(3).info(f"data: {data}")
+
+            if not data:
+                return Response(
+                    {"error": "No QR code data found in watermark"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             return Response(
-                {"error": "image_id is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": "Verification successful", "data": data},
+                status=status.HTTP_200_OK,
             )
 
-        logger.V(3).info(f"image_id: {image_id}")
-        image = Image.objects.get(id=image_id)
-
-        if not image:
+        except Exception as e:
+            logger.error(f"Unexpected error during verification: {str(e)}")
             return Response(
-                {"error": "image not found"}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Internal server error occurred"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        metadata = extract_exif_data(PILImage.open(image.image))
-        signed_certificate = metadata["0th"][271].decode("utf-8")
-
-        logger.info(f"signed_certificate: {signed_certificate}")
-
-        certificate = decrypt_string(signed_certificate, settings.SERVER_PRIVATE_KEY)
-        logger.info(f"certificate: {certificate}")
-
-        certificate_hash = calculate_string_hash(certificate)
-        logger.info(f"certificate_hash: {certificate_hash}")
-
-        deserialized_certificate, length = deserialize_certificate(
-            # Read the certificate as bytes from hex-encoded string as the certificate is a hex string
-            bytes.fromhex(certificate)
-        )
-        logger.info(f"deserialized_certificate: {deserialized_certificate}")
-
-        watermarker = WaveletDCTWatermark()
-        watermark_arr = watermarker.frecover_watermark(PILImage.open(image.image))
-        watermark_img = PILImage.fromarray(watermark_arr)
-
-        data = watermarker.fread_qr_code_cv2(watermark_img)
-
-        logger.V(3).info(f"data: {data}")
-
-        # ! TODO: Provide proper response
-        return Response({"message": "Not a SHANTYYY", "sadntanu": data}, status=200)
 
 
 # TODO: FIX THIS
@@ -496,6 +538,7 @@ class ImageDownloadView(APIView):
                 {"error": "Image not found"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
+            logger.error(f"Error: {e}")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -752,11 +795,9 @@ class ImageExifView(APIView):
                 )
 
             image_file = request.FILES["image"]
-
-            # Open image with PIL
             img = PILImage.open(image_file)
 
-            exif_data = extract_exif_data(img)
+            exif_data = extract_exif_data_PIEXIF(img)
 
             return Response(
                 {"message": "EXIF data extracted successfully", "exif_data": exif_data},
