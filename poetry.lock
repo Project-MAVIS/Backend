@@ -1294,6 +1294,18 @@ files = [
 cli = ["click (>=5.0)"]
 
 [[package]]
+name = "pytz"
+version = "2025.1"
+description = "World timezone definitions, modern and historical"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pytz-2025.1-py2.py3-none-any.whl", hash = "sha256:89dd22dca55b46eac6eda23b2d72721bf1bdfef212645d81513ef5d03038de57"},
+    {file = "pytz-2025.1.tar.gz", hash = "sha256:c2db42be2a2518b28e65f9207c4d05e6ff547d1efa4086469ef855e4ab70178e"},
+]
+
+[[package]]
 name = "pywavelets"
 version = "1.8.0"
 description = "PyWavelets, wavelet transform module"
@@ -1865,4 +1877,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "fdeade00c573f935e140cf10c3a1e5ae04a1d9dd34bb7961411a85eba9cfa00d"
+content-hash = "e7ab5c15e71f9c8b369aa3f2f580c0705dc32ca5557d105630c90c9bc740b599"

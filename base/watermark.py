@@ -4,13 +4,11 @@ import pywt
 from PIL import Image
 from scipy.fftpack import dct, idct
 from pathlib import Path
-from backend.logging_utils import get_verbose_logger
+from backend.logging_utils import logger
 
 import cv2
 
 # from pyzbar.pyzbar import decode
-
-logger = get_verbose_logger("server_log")
 
 
 class WaveletDCTWatermark:

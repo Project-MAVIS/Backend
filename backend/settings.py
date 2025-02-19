@@ -37,71 +37,9 @@ except ValueError as e:
     print(e)
     # exit(1)
 
-# Default verbosity level
-DEFAULT_VERBOSITY = 0
-
-# Get verbosity level from command line
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-v",
-    "--verbosity",
-    type=int,
-    default=DEFAULT_VERBOSITY,
-    help="Logging verbosity level (1-5)",
-)
-# Only parse known args to avoid conflicts with Django's manage.py
-args, _ = parser.parse_known_args()
-VERBOSITY_LEVEL = args.verbosity
-
+# Keep this if you want to ensure the logs directory exists
 LOG_FILE_PATH = os.path.join(BASE_DIR, "logs", "server.log")
-
-# Ensure the directory exists
 os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
-
-# Logging configuration
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "standard": {
-            "format": "[%(asctime)s] %(levelname)s %(name)s: %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-    },
-    "filters": {
-        "verbosity_filter": {
-            "()": "backend.logging_utils.VerbosityFilter",
-            "verbosity_level": VERBOSITY_LEVEL,
-        },
-    },
-    "handlers": {
-        "file": {
-            "level": "DEBUG",  # Set to DEBUG to allow all verbose messages
-            "class": "logging.FileHandler",
-            "filename": LOG_FILE_PATH,
-            "formatter": "standard",
-            "filters": ["verbosity_filter"],
-        },
-        "console": {
-            "level": "DEBUG",  # Set to DEBUG to allow all verbose messages
-            "class": "logging.StreamHandler",
-            "formatter": "standard",
-            "filters": ["verbosity_filter"],
-        },
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["file", "console"],
-            "level": "INFO",
-            "propagate": True,
-        },
-        "server_log": {
-            "handlers": ["file", "console"],
-            "level": "DEBUG",
-            "propagate": True,
-        },
-    },
-}
 
 # Application definition
 

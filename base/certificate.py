@@ -4,10 +4,7 @@ from dataclasses import dataclass
 from typing import Tuple
 from .models import Image, DeviceKeys
 from django.contrib.auth.models import User
-
-from backend.logging_utils import get_verbose_logger
-
-logger = get_verbose_logger("server_log")
+from backend.logging_utils import logger
 
 
 @dataclass

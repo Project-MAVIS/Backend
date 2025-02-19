@@ -45,14 +45,12 @@ from .watermark import WaveletDCTWatermark
 from .certificate import *
 from .metadata import *
 from . import models
-from backend.logging_utils import get_verbose_logger
-
-logger = get_verbose_logger("server_log")
+from backend.logging_utils import logger
 
 
 @api_view(["GET"])
 def ping(_) -> Response:
-    logger.V(0).info("LOG")
+    logger.V(1).info("PING PONG LOG")
     return Response("pong")
 
 
@@ -72,8 +70,8 @@ class RegisterUserView(generics.CreateAPIView):
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
 
-        logger.V(2).info(f"serializer: {serializer}")
-        logger.V(2).info(f"request data: {request.data}")
+        logger.V(3).info(f"serializer: {serializer}")
+        logger.V(3).info(f"request data: {request.data}")
 
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -81,7 +79,7 @@ class RegisterUserView(generics.CreateAPIView):
         # Generate and save key pair
         private_key, public_key = generate_key_pair()
 
-        logger.V(2).info(f"private key: {private_key}")
+        logger.V(3).info(f"private key: {private_key}")
 
         DeviceKeys.objects.create(
             user=user,
@@ -165,15 +163,15 @@ class ImageUploadView(generics.CreateAPIView):
         try:
             # Get the device-signed image hash
             dev_signed_img_hash = base64.b64decode(request.data.get("image_hash"))
-            logger.V(2).info(f"dev_signed_img_hash: {dev_signed_img_hash}")
+            logger.V(3).info(f"dev_signed_img_hash: {dev_signed_img_hash}")
 
             # Get the image object
             image_obj = serializer.validated_data["image"]
             image_hash = hashlib.sha256(image_obj.read()).hexdigest()
-            logger.V(2).info(f"calculated image hash: {image_hash}")
+            logger.V(3).info(f"calculated image hash: {image_hash}")
 
             device_name = request.data.get("device_name")
-            logger.V(2).info(f"device_name: {device_name}")
+            logger.V(3).info(f"device_name: {device_name}")
 
             if not device_name:
                 return Response(
@@ -198,14 +196,14 @@ class ImageUploadView(generics.CreateAPIView):
 
                 # Make the certificate, sign the certificate
                 img_cert = create_certificate(image_object, device_key)
-                logger.V(2).info(f"img_cert: {img_cert}")
+                logger.V(3).info(f"img_cert: {img_cert}")
 
                 enc_img_cert = encrypt_string(img_cert, settings.SERVER_PUBLIC_KEY)
-                logger.V(2).info(f"enc_img_cert: {enc_img_cert}")
+                logger.V(3).info(f"enc_img_cert: {enc_img_cert}")
 
                 # Calculate the hash of the certificate
                 cert_hash = calculate_string_hash(img_cert)
-                logger.V(2).info(f"cert_hash: {cert_hash}")
+                logger.V(3).info(f"cert_hash: {cert_hash}")
 
                 # Create the QR code
                 final_cert_qr_code = pyqrcode.create(cert_hash)
@@ -232,7 +230,7 @@ class ImageUploadView(generics.CreateAPIView):
                 )
 
                 # Just to verify the metadata is added correctly
-                logger.V(2).info(
+                logger.V(3).info(
                     f"watermarked_image_metadata: {extract_exif_data(watermarked_img_w_metadata)}"
                 )
 
@@ -260,7 +258,7 @@ class ImageUploadView(generics.CreateAPIView):
                     exif=piexif.dump(metadata),
                 )
 
-                logger.V(2).info(
+                logger.V(3).info(
                     f"Watermarked Image Saved Path: {watermarked_image_obj.image.path}"
                 )
 
@@ -296,7 +294,7 @@ class ImageVerifierView(APIView):
                 {"error": "image_id is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        logger.V(2).info(f"image_id: {image_id}")
+        logger.V(3).info(f"image_id: {image_id}")
         image = Image.objects.get(id=image_id)
 
         if not image:
@@ -327,7 +325,7 @@ class ImageVerifierView(APIView):
 
         data = watermarker.fread_qr_code_cv2(watermark_img)
 
-        logger.V(2).info(f"data: {data}")
+        logger.V(3).info(f"data: {data}")
 
         # ! TODO: Provide proper response
         return Response({"message": "Not a SHANTYYY", "sadntanu": data}, status=200)
@@ -609,7 +607,7 @@ class GenerateQRView(generics.CreateAPIView):
 
         # Get string from request
         string_value = request.data.get("string")
-        logger.V(2).info(f"string_value: {string_value}")
+        logger.V(3).info(f"string_value: {string_value}")
 
         if not string_value:
             return Response(

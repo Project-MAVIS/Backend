@@ -1,115 +1,97 @@
 import logging
-from typing import cast, Any
+import os
+from datetime import datetime
+import pytz
 
 
-class VerbosityLogger(logging.Logger):
-    def V(self, level: int) -> "VerbosityAdapter":
-        """Returns a logger that only logs if verbosity level is high enough
-
-        Args:
-            level: Verbosity level (1-5)
-
-        Levels:
-            0: NOTSET
-            1: DEBUG
-            2: INFO
-            3: WARNING
-            4: ERROR
-            5: CRITICAL
-
-        Returns:
-            VerbosityAdapter: A logger adapter for the specified verbosity level
-        """
-        return VerbosityAdapter(self, level)
-
-
-class VerbosityAdapter:
-    def __init__(self, logger: VerbosityLogger, level: int) -> None:
-        self.logger = logger
-        self.level = level
-
-    def info(self, msg: Any, *args: Any, **kwargs: Any) -> None:
-        """Log with custom verbose level
-
-        Args:
-            msg: The message to log
-            *args: Variable length argument list
-            **kwargs: Arbitrary keyword arguments
-        """
-        # Calculate the actual logging level based on verbosity
-        if self.level == 0:
-            level = logging.NOTSET
-        elif self.level == 1:
-            level = logging.DEBUG
-        elif self.level == 2:
-            level = logging.INFO
-        elif self.level == 3:
-            level = logging.WARNING
-        elif self.level == 4:
-            level = logging.ERROR
-        elif self.level == 5:
-            level = logging.CRITICAL
-        else:
-            level = logging.INFO
-
-        self.logger.log(level, msg, *args, **kwargs)
-
-    def error(self, msg: Any, *args: Any, **kwargs: Any) -> None:
-        """Log an error message (always shown regardless of verbosity level)
-
-        Args:
-            msg: The message to log
-            *args: Variable length argument list
-            **kwargs: Arbitrary keyword arguments
-        """
-        self.logger.error(msg, *args, **kwargs)
-
-
-class VerbosityFilter(logging.Filter):
-    def __init__(self, verbosity_level):
-        super().__init__()
-        self.verbosity_level = verbosity_level
-
-    def filter(self, record):
-        # Allow all standard logging levels
-        if record.levelno in (
-            logging.DEBUG,
-            logging.INFO,
-            logging.WARNING,
-            logging.ERROR,
-            logging.CRITICAL,
-        ):
-            return True
-
-        # Get the required verbosity level for this record
-        required_verbosity = self.verbosity_level
-
-        # Allow the record if the current verbosity level is high enough
-        return self.verbosity_level >= required_verbosity
-
-
-# Register the custom logger class
-logging.setLoggerClass(VerbosityLogger)
-
-
-def get_verbose_logger(name: str) -> VerbosityLogger:
-    """Get a logger instance with verbosity support
-
-    Args:
-        name: The name of the logger
-
-    Returns:
-        VerbosityLogger: A logger with verbosity support
+class VerbosityLogger:
     """
-    return cast(VerbosityLogger, logging.getLogger(name))
+    A logger class that supports verbosity levels and provides info and error logging capabilities.
+    Logs with verbosity level less than or equal to the set level will be logged.
+    """
+
+    def __init__(self, verbosity: int = 1):
+        self._verbosity = max(1, min(8, verbosity))  # Clamp between 1 and 8
+        self._current_verbosity = 1
+
+        # Configure logging
+        self._logger = logging.getLogger("django_app")
+
+        # Clear any existing handlers to prevent duplicate logging
+        if self._logger.hasHandlers():
+            self._logger.handlers.clear()
+
+        self._logger.setLevel(logging.INFO)
+
+        # Create logs directory if it doesn't exist
+        log_dir = "logs"
+        os.makedirs(log_dir, exist_ok=True)
+
+        # Create formatters with IST timezone
+        ist_tz = pytz.timezone("Asia/Kolkata")
+
+        class ISTFormatter(logging.Formatter):
+            def formatTime(self, record, datefmt=None):
+                dt = datetime.fromtimestamp(record.created, tz=ist_tz)
+                return dt.strftime(datefmt or "%Y-%m-%d %H:%M:%S %Z")
+
+        file_formatter = ISTFormatter(
+            "%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S %Z"
+        )
+        console_formatter = ISTFormatter("%(asctime)s %(message)s")
+
+        # File handler - Change to use server.log
+        file_handler = logging.FileHandler(os.path.join(log_dir, "server.log"))
+        file_handler.setFormatter(file_formatter)
+        self._logger.addHandler(file_handler)
+
+        # Console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(console_formatter)
+        self._logger.addHandler(console_handler)
+
+        # Prevent propagation to root logger
+        self._logger.propagate = False
+
+    def V(self, level: int) -> "VerbosityLogger":
+        """Set the verbosity level for the next log message."""
+        self._current_verbosity = max(1, min(8, level))
+        return self
+
+    def _should_log(self) -> bool:
+        """Check if the current verbosity level should be logged."""
+        return self._current_verbosity <= self._verbosity
+
+    def _reset_verbosity(self) -> None:
+        """Reset verbosity to default level after logging."""
+        self._current_verbosity = 1
+
+    def info(self, message: str) -> None:
+        """
+        Log an info message if the current verbosity level is less than or equal to
+        the logger's verbosity setting.
+        """
+        if self._should_log():
+            self._logger.info(f"[V{self._current_verbosity}] {message}")
+        self._reset_verbosity()
+
+    def error(self, message: str) -> None:
+        """
+        Log an error message regardless of verbosity level.
+        """
+        self._logger.error(f"[ERROR] {message}")
+        self._reset_verbosity()
 
 
-# Example usage
+# Global logger instance
+logger = VerbosityLogger()
 
-# logger = logging.getLogger("server_log")
 
-# These will only show up if the verbosity level is high enough
-# logger.V(0).info("Basic verbose message")  # Shows with -v 0 or higher
-# logger.V(1).info("Basic verbose message")  # Shows with -v 1 or higher
-# logger.V(2).info("More detailed message")  # Shows with -v 2 or higher
-# logger.V(3).info("Debug level message")  # Shows with -v 3 or higher
+def set_verbosity(level: int) -> None:
+    """
+    Set the global logger verbosity level.
+    Args:
+        level (int): Verbosity level (1-8)
+    """
+    global logger
+    logger = VerbosityLogger(level)

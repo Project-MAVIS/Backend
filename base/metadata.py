@@ -6,9 +6,7 @@ import numpy as np
 import piexif
 from io import BytesIO
 from exif import Image as ExifImage
-from backend.logging_utils import get_verbose_logger
-
-logger = get_verbose_logger("server_log")
+from backend.logging_utils import logger
 
 
 def add_exif_to_array_image(

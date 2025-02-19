@@ -14,13 +14,9 @@ import os
 import json
 import piexif
 from dotenv import load_dotenv
-from backend.logging_utils import get_verbose_logger
+from backend.logging_utils import logger
 
 load_dotenv()
-
-logger = get_verbose_logger("server_log")
-
-from cryptography.hazmat.primitives import serialization
 
 
 def generate_key_pair():
