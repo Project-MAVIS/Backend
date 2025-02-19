@@ -13,7 +13,6 @@ urlpatterns = [
 
     path('get-image/', views.ImageLinkProvider.as_view(), name='get-image'),
     path('watermark-extract/<int:image_id>/extract', views.ImageVerifyView.as_view(), name='watermark-extract'),
-    path('watermark-extract/', views.ImageVerifyView.as_view(), name='watermark-extract'),
     path('images/', views.ImageListView.as_view(), name='image-list'),
     path('images/<int:image_id>/', views.ImageDownloadView.as_view(), name='download-image'),
     path('calculate-hash/', views.CalculateImageHashView.as_view(), name='calculate-hash'),

@@ -8,7 +8,10 @@ from backend.logging_utils import logger
 
 import cv2
 
-# from pyzbar.pyzbar import decode
+# Install zbar using sudo apt install libzbar0
+# Works only on linux
+# Comment out this code if working on mac or windows
+from pyzbar.pyzbar import decode
 
 
 class WaveletDCTWatermark:
@@ -484,66 +487,66 @@ class WaveletDCTWatermark:
             print(f"Error recovering watermark: {str(e)}")
             raise
 
-    ## Keeping this function commented for now
-    ## @Omkar dont u dare uncomment this
-    # def read_qr_code(self, image_path):
-    #     try:
-    #         # Read the image
-    #         image = cv2.imread(image_path)
+    # Works only on linux
+    # Comment out this code if working on mac or windows
+    def read_qr_code_ZBAR(self, image_path):
+        try:
+            # Read the image
+            image = cv2.imread(image_path)
 
-    #         if image is None:
-    #             raise ValueError(f"Could not read image at {image_path}")
+            if image is None:
+                raise ValueError(f"Could not read image at {image_path}")
 
-    #         # Convert to grayscale
-    #         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # Convert to grayscale
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    #         # Decode QR codes
-    #         qr_codes = decode(gray)
+            # Decode QR codes
+            qr_codes = decode(gray)
 
-    #         if not qr_codes:
-    #             logger.info("No QR codes found in the image")
-    #             return []
+            if not qr_codes:
+                logger.info("No QR codes found in the image")
+                return []
 
-    #         results = []
-    #         for qr in qr_codes:
-    #             # Convert bytes to string
-    #             data = qr.data.decode("utf-8")
-    #             results.append({"data": data, "type": qr.type, "position": qr.rect})
+            results = []
+            for qr in qr_codes:
+                # Convert bytes to string
+                data = qr.data.decode("utf-8")
+                results.append({"data": data, "type": qr.type, "position": qr.rect})
 
-    #         return results
+            return results
 
-    #     except Exception as e:
-    #         logger.info(f"Error reading QR code: {str(e)}")
-    #         raise e
+        except Exception as e:
+            logger.info(f"Error reading QR code: {str(e)}")
+            raise e
 
-    # def fread_qr_code(pil_image: Image.Image):
-    #     try:
-    #         # Convert PIL image to OpenCV format (numpy array)
-    #         image = np.array(pil_image)
+    def fread_qr_code_ZBAR(pil_image: Image.Image):
+        try:
+            # Convert PIL image to OpenCV format (numpy array)
+            image = np.array(pil_image)
 
-    #         # Convert to grayscale
-    #         gray = cv2.cvtColor(
-    #             image, cv2.COLOR_RGB2GRAY
-    #         )  # Use RGB since PIL loads in RGB format
+            # Convert to grayscale
+            gray = cv2.cvtColor(
+                image, cv2.COLOR_RGB2GRAY
+            )  # Use RGB since PIL loads in RGB format
 
-    #         # Decode QR codes
-    #         qr_codes = decode(gray)
+            # Decode QR codes
+            qr_codes = decode(gray)
 
-    #         if not qr_codes:
-    #             logger.info("No QR codes found in the image")
-    #             return []
+            if not qr_codes:
+                logger.info("No QR codes found in the image")
+                return []
 
-    #         results = []
-    #         for qr in qr_codes:
-    #             # Convert bytes to string
-    #             data = qr.data.decode("utf-8")
-    #             results.append({"data": data, "type": qr.type, "position": qr.rect})
+            results = []
+            for qr in qr_codes:
+                # Convert bytes to string
+                data = qr.data.decode("utf-8")
+                results.append({"data": data, "type": qr.type, "position": qr.rect})
 
-    #         return results
+            return results
 
-    #     except Exception as e:
-    #         logger.info(f"Error reading QR code: {str(e)}")
-    #         raise e
+        except Exception as e:
+            logger.info(f"Error reading QR code: {str(e)}")
+            raise e
 
     def read_qr_code_cv2(self, image_path):
         """Alternative QR code reader using OpenCV's QR detector.

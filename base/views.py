@@ -1,6 +1,5 @@
 # Python standard library
 import io
-import logging
 import os
 import base64
 import hashlib
@@ -98,55 +97,6 @@ class RegisterUserView(generics.CreateAPIView):
             },
             status=status.HTTP_201_CREATED,
         )
-
-
-class ImageVerifyView(generics.CreateAPIView):
-    serializer_class = ImageSerializer
-    parser_classes = (MultiPartParser, FormParser)
-
-    def post(self, request: Request):
-        try:
-
-            # Check if the request contains the file
-            if "image" not in request.FILES:
-                return Response({"error": "No file uploaded"}, status=400)
-
-            file = request.FILES["image"]
-
-            # Define the directory where you want to save the uploaded file
-            upload_dir = os.path.join(settings.MEDIA_ROOT, "verify")
-
-            # Ensure the directory exists
-            if not os.path.exists(upload_dir):
-                os.makedirs(upload_dir)
-
-            # Save the file to the directory
-            file_path = os.path.join(upload_dir, file._name)
-            with open(file_path, "wb") as f:
-                for chunk in file.chunks():
-                    f.write(chunk)
-
-            logger.info(1)
-
-            watermarker = WaveletDCTWatermark()
-            watermarker.recover_watermark(
-                image_path=f"{settings.MEDIA_ROOT}/verify/{file._name}"
-            )
-
-            hash = watermarker.read_qr_code(
-                f"{settings.MEDIA_ROOT}/result/recovered_watermark.jpg"
-            )
-
-            values = Image.objects.filter(image_hash=hash[0]["data"])
-
-            # Return a success response
-            if len(values) >= 1:
-                return Response({"status": "verified"})
-            else:
-                return Response({"status": "Not verified"})
-        except Exception as e:
-            logger.error(f"Error: {e}")
-            return Response({"message": f"There was an error: {str(e)}"}, status=200)
 
 
 class ImageUploadView(generics.CreateAPIView):
@@ -353,17 +303,35 @@ class ImageVerifierView(APIView):
                 )
 
             logger.V(3).info(f"data: {data}")
-
+                
             if not data:
                 return Response(
                     {"error": "No QR code data found in watermark"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+                
+            hash_from_qr = data[0]["data"]
+            logger.V(2).info(f"hash_from_qr: {hash_from_qr}")
 
-            return Response(
-                {"message": "Verification successful", "data": data},
-                status=status.HTTP_200_OK,
-            )
+            if certificate_hash != hash_from_qr:
+                return Response(
+                    {"error": "Certificate hash does not match QR code hash"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            else:
+                return Response(
+                    {
+                        "success": True, 
+                        "message": "Verification successful. Image is authentic.",
+                        "image_id": deserialized_certificate.image_id,
+                        "user_id": deserialized_certificate.user_id,
+                        "device_id": deserialized_certificate.device_id,
+                        "timestamp": datetime.datetime.fromtimestamp(deserialized_certificate.timestamp).strftime('%Y-%m-%d %H:%M:%S'),
+                        "username": deserialized_certificate.username,
+                        "device_name": deserialized_certificate.device_name,
+                    },
+                    status=status.HTTP_200_OK,
+                )
 
         except Exception as e:
             logger.error(f"Unexpected error during verification: {str(e)}")
