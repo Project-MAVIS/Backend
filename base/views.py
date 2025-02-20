@@ -22,6 +22,9 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.permissions import AllowAny
+from rest_framework.validators import UniqueValidator
+from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
 
 # Cryptography
 from cryptography.hazmat.primitives import hashes, serialization
@@ -62,10 +65,11 @@ def truncate(_):
         return Response({"Status": "Exception", "message": str(e)})
     return Response({"Status": "Complete"})
 
+class UserRegistrationView(generics.CreateAPIView):
+    """Used to mock user creation from mobile device"""
 
-class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserSerializer
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.AllowAny)
 
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -76,25 +80,11 @@ class RegisterUserView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Generate and save key pair
-        private_key, public_key = generate_key_pair()
-
-        logger.V(3).info(f"private key: {private_key}")
-
-        DeviceKeys.objects.create(
-            user=user,
-            private_key=private_key,
-            public_key=public_key,
-            name=user.username,
-        )
-
         return Response(
             {
                 "message": "Registration successful",
                 "user_id": user.id,
                 "username": user.username,
-                "public_key": public_key,
-                "private_key": private_key,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -404,6 +394,45 @@ class ImageVerifierView(APIView):
                 {"error": "Internal server error occurred"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class Demo_RegisterUserView(generics.CreateAPIView):
+    """Used to mock user creation from mobile device"""
+
+    serializer_class = UserSerializer
+    permission_classes = (permissions.AllowAny,)
+
+    def create(self, request: Request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        logger.V(3).info(f"serializer: {serializer}")
+        logger.V(3).info(f"request data: {request.data}")
+
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        # Generate and save key pair
+        private_key, public_key = generate_key_pair()
+
+        logger.V(3).info(f"private key: {private_key}")
+
+        DeviceKeys.objects.create(
+            user=user,
+            private_key=private_key,
+            public_key=public_key,
+            name=user.username,
+        )
+
+        return Response(
+            {
+                "message": "Registration successful",
+                "user_id": user.id,
+                "username": user.username,
+                "public_key": public_key,
+                "private_key": private_key,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 # TODO: FIX THIS
