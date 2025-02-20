@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import DeviceRegistrationView
 
 # Black formatter is disabled here because it messes up the formatting of the code
 # fmt: off
@@ -7,6 +8,7 @@ urlpatterns = [
     # Setup
     path('ping', views.ping, name="ping"),
     path('register/', views.RegisterUserView.as_view(), name='register'),
+    path('register-device/', DeviceRegistrationView.as_view(), name='register-device'),
 
     path('upload-image/', views.ImageUploadView.as_view(), name='upload-image'),
     path('verify/', views.ImageVerifierView.as_view(), name="ImageVerifier"),

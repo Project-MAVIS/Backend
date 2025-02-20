@@ -21,6 +21,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
+from rest_framework.permissions import AllowAny
 
 # Cryptography
 from cryptography.hazmat.primitives import hashes, serialization
@@ -97,6 +98,66 @@ class RegisterUserView(generics.CreateAPIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class DeviceRegistrationView(APIView):
+    """
+    View for registering a new device with associated public key and device name.
+    Requires username, device_name, and public_key in the request.
+    """
+
+    permission_classes = (AllowAny,)
+
+    def post(self, request: Request):
+        try:
+            # Get required fields from request data
+            username = request.data.get("username")
+            device_name = request.data.get("device_name")
+            public_key = request.data.get("public_key")
+
+            # Validate required fields
+            if not all([username, device_name, public_key]):
+                return Response(
+                    {"error": "Username, device name and public key are required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Check if user exists
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                return Response(
+                    {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check if device name already exists for this user
+            if DeviceKeys.objects.filter(name=device_name).exists():
+                return Response(
+                    {"error": "Device name already exists"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Create new device key entry
+            device_key = DeviceKeys.objects.create(
+                user=user, name=device_name, public_key=public_key
+            )
+
+            return Response(
+                {
+                    "message": "Device registered successfully",
+                    "device_id": device_key.id,
+                    "device_name": device_key.name,
+                    "username": user.username,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        except Exception as e:
+            logger.error(f"Error in device registration: {str(e)}")
+            return Response(
+                {"error": f"Error registering device: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class ImageUploadView(generics.CreateAPIView):
@@ -279,7 +340,9 @@ class ImageVerifierView(APIView):
                     # Read the certificate as bytes from hex-encoded string as the certificate is a hex string
                     bytes.fromhex(certificate)
                 )
-                logger.V(3).info(f"deserialized_certificate: {deserialized_certificate}")
+                logger.V(3).info(
+                    f"deserialized_certificate: {deserialized_certificate}"
+                )
             except ValueError as e:
                 return Response(
                     {"error": f"Invalid certificate format: {str(e)}"},
@@ -303,13 +366,13 @@ class ImageVerifierView(APIView):
                 )
 
             logger.V(3).info(f"data: {data}")
-                
+
             if not data:
                 return Response(
                     {"error": "No QR code data found in watermark"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-                
+
             hash_from_qr = data[0]["data"]
             logger.V(2).info(f"hash_from_qr: {hash_from_qr}")
 
@@ -321,12 +384,14 @@ class ImageVerifierView(APIView):
             else:
                 return Response(
                     {
-                        "success": True, 
+                        "success": True,
                         "message": "Verification successful. Image is authentic.",
                         "image_id": deserialized_certificate.image_id,
                         "user_id": deserialized_certificate.user_id,
                         "device_id": deserialized_certificate.device_id,
-                        "timestamp": datetime.datetime.fromtimestamp(deserialized_certificate.timestamp).strftime('%Y-%m-%d %H:%M:%S'),
+                        "timestamp": datetime.datetime.fromtimestamp(
+                            deserialized_certificate.timestamp
+                        ).strftime("%Y-%m-%d %H:%M:%S"),
                         "username": deserialized_certificate.username,
                         "device_name": deserialized_certificate.device_name,
                     },
@@ -342,6 +407,7 @@ class ImageVerifierView(APIView):
 
 
 # TODO: FIX THIS
+# ! DOES NOT WORK
 class ImageLinkProvider(APIView):
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser)
