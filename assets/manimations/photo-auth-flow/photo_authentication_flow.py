@@ -13,22 +13,21 @@ class PhotoAuthenticationFlow(Scene):
         # Start phone in center
         phone_group.move_to(ORIGIN)
 
-        # Create a "flash" effect - using ShowCreation instead of Flash
-        flash_lines = VGroup(
-            *[
-                Line(
-                    camera_lens.get_center(),
-                    camera_lens.get_center() + RIGHT * 0.3 + UP * 0.3,
-                ).rotate(angle=i * PI / 6, about_point=camera_lens.get_center())
-                for i in range(12)
-            ]
-        )
-        flash_lines.set_color(WHITE)
-
         # Scene 1 Animation
         self.play(Create(phone_group))
-        self.play(Create(flash_lines))
-        self.play(FadeOut(flash_lines))
+
+        self.play(
+            Flash(
+                camera_lens,
+                line_length=1,
+                num_lines=30,
+                color=RED,
+                flash_radius=0.2 + SMALL_BUFF,
+                time_width=0.3,
+                run_time=2,
+                rate_func=rush_from,
+            )
+        )
 
         # Move phone further to left before showing photo
         self.play(phone_group.animate.shift(LEFT * 4))  # Moved further left
