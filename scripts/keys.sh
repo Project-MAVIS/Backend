@@ -3,11 +3,11 @@
 # Create .keys directory if it doesn't exist
 mkdir -p .keys
 
-# Generate RSA private key
-openssl genpkey -algorithm RSA -out .keys/private.key -pkeyopt rsa_keygen_bits:2048
+# Generate ECC private key using P-256 curve
+openssl ecparam -name prime256v1 -genkey -noout -out .keys/private.key
 
 # Extract public key from private key
-openssl rsa -pubout -in .keys/private.key -out .keys/public.key
+openssl ec -in .keys/private.key -pubout -out .keys/public.key
 
 # Set appropriate permissions
 chmod 600 .keys/private.key
