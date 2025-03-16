@@ -42,7 +42,6 @@ coverage.xml
 # Tox
 .tox/
 .cache/
-.python-version
 
 # VirtualEnv
 .venv/
