@@ -249,7 +249,8 @@ class WaveletDCTWatermark:
 
         return watermark
 
-    def apply_dct(self, image_array):
+    @staticmethod
+    def apply_dct(image_array):
         """Apply DCT transform to image"""
         try:
             size = image_array.shape[0]
