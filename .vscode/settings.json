@@ -1,0 +1,4 @@
+{
+  "appService.defaultWebAppToDeploy": "/subscriptions/6dfb71c5-3d1f-4774-a2d8-527a1bb72f21/resourceGroups/mavisbackend/providers/Microsoft.Web/sites/mavis-backend",
+  "appService.deploySubpath": "."
+}

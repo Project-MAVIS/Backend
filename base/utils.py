@@ -6,10 +6,8 @@ from cryptography.hazmat.primitives.asymmetric.types import (
     PrivateKeyTypes,
 )
 import base64
-import hashlib
-from cv2.typing import MatLike
 from PIL import Image
-from base64 import b64encode, b64decode
+from base64 import b64decode
 import os
 import json
 import piexif
