@@ -8,6 +8,7 @@ from datetime import datetime
 import random
 
 # Django imports
+from django.shortcuts import render
 from django.urls import reverse
 from django.conf import settings
 from django.http import FileResponse, HttpResponse
@@ -65,11 +66,12 @@ def truncate(_):
         return Response({"Status": "Exception", "message": str(e)})
     return Response({"Status": "Complete"})
 
+
 class UserRegistrationView(generics.CreateAPIView):
     """Used to mock user creation from mobile device"""
 
     serializer_class = UserSerializer
-    permission_classes = (permissions.AllowAny)
+    permission_classes = permissions.AllowAny
 
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -872,3 +874,7 @@ class ImageExifView(APIView):
                 {"error": f"Error extracting EXIF data: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+def landing_page(request):
+    return render(request, "landing.html")

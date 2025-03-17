@@ -17,8 +17,12 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from base.views import landing_page
 
 urlpatterns = [
+    path("", landing_page, name="landing"),
     path("admin/", admin.site.urls),
     path("api/", include("base.urls")),
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
