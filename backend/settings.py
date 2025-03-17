@@ -29,7 +29,7 @@ SECRET_KEY = "django-insecure-9o8plk=l!k(7ytpb)6pm@30f(!9pu0*26_b$4imq$v#!$de#$#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['mavisbackend-dfd3bbe8g7eycdeb.centralindia-01.azurewebsites.net']
 
 try:
     SERVER_PRIVATE_KEY, SERVER_PUBLIC_KEY = initialize_server_keys()
