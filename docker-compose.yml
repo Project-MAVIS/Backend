@@ -1,12 +1,15 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  app:
-    build: .
-    container_name: MAVIS_App
-    working_dir: /app
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-    command: ["python", "manage.py", "runserver", "-l", "3"]
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: mavis-app:latest
+        container_name: MAVIS_App
+        working_dir: /app
+        ports:
+            - "8000:8000"
+        volumes:
+            - .:/app
+        command: ["python", "manage.py", "runserver", "-l", "3"]

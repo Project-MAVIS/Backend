@@ -14,6 +14,9 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Required for cv2 to run otherwise throws: ImportError: libGL.so.1: cannot open shared object file error
+RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+
 RUN sh scripts/setup.sh
 
 EXPOSE 8000
