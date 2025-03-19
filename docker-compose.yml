@@ -14,4 +14,7 @@ services:
             - "3000:3000"
         volumes:
             - .:/app
-        command: ["python", "manage.py", "runserver", "-l", "3"]
+        command: python manage.py runserver 0.0.0.0:8000 -l 6
+        environment:
+            - DEBUG=1
+            - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1
