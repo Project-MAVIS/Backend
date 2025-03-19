@@ -10,6 +10,8 @@ services:
         working_dir: /app
         ports:
             - "8000:8000"
+            - "8001:8001"
+            - "3000:3000"
         volumes:
             - .:/app
         command: ["python", "manage.py", "runserver", "-l", "3"]
