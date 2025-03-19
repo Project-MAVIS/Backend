@@ -24,15 +24,22 @@ dependencies = [
     "pypng (>=0.20220715.0,<0.20220716.0)",
     "exif (>=1.6.1,<2.0.0)",
     "pytz (>=2025.1,<2026.0)",
-    "gunicorn (>=23.0.0)",
-    "uvicorn>=0.34.0",
 ]
 
-[dependency-groups]
-dev = [
-    "black>=25.1.0",
-    "ipykernel>=6.29.5",
-    "ipython>=8.34.0",
-    "pre-commit>=4.1.0",
-    "requests>=2.32.3",
-]
+[tool.poetry]
+package-mode = false
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+pre-commit = "^4.1.0"
+ipykernel = "^6.29.5"
+ipython = "^8.31.0"
+requests = "^2.32.3"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.4"

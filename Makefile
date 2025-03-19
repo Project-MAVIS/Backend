@@ -1,30 +1,33 @@
-.PHONY: setup install clean format lint test coverage serve help venv
+.PHONY: setup install clean format lint test coverage serve help
 
 # Variables
 PYTHON = python3
-UV = uv
+POETRY = poetry
 VENV_NAME = .venv
 
-help: ## Show this help menu
+help:  ## Show this help menu
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-keys: ## Set up keys for the project
+keys:
 	chmod +x keys.sh
 	sh keys.sh
 
-venv: ## Create virtual environment in current directory
-	test -d $(VENV_NAME) || $(UV) venv
+venv:  ## Create virtual environment in current directory
+	test -d $(VENV_NAME) || $(PYTHON) -m venv $(VENV_NAME)
+	$(POETRY) config virtualenvs.in-project true
+	$(POETRY) env use $(VENV_NAME)/bin/python
 
-setup: venv ## Install project dependencies
-	$(UV) run
+setup: venv  ## Install project dependencies
+	poetry config virtualenvs.in-project true
+	$(POETRY) install --no-root
 
-test: ## Run tests
+test:  ## Run tests
 	$(PYTHON) manage.py test
 
-start: ## Start the development server
-	$(UV) run manage.py runserver
+start:  ## Start the development server
+	$(POETRY) run python manage.py runserver
 
-clean: ## Remove Python file artifacts and cache directories
+clean:  ## Remove Python file artifacts and cache directories
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
@@ -35,18 +38,18 @@ clean: ## Remove Python file artifacts and cache directories
 	find . -type d -name "dist" -exec rm -rf {} +
 	find . -type d -name "build" -exec rm -rf {} +
 
-format: ## Format code using black and isort
-	$(UV) run black .
-	$(UV) run isort .
+format:  ## Format code using black and isort
+	$(POETRY) run black .
+	$(POETRY) run isort .
 
-lint: ## Run linting checks
-	$(UV) run flake8 .
-	$(UV) run black . --check
-	$(UV) run isort . --check
-	$(UV) run mypy .
+lint:  ## Run linting checks
+	$(POETRY) run flake8 .
+	$(POETRY) run black . --check
+	$(POETRY) run isort . --check
+	$(POETRY) run mypy .
 
-coverage: ## Run tests with coverage report
-	$(UV) run pytest --cov=./ --cov-report=term-missing
+coverage:  ## Run tests with coverage report
+	$(POETRY) run pytest --cov=./ --cov-report=term-missing
 
-serve: ## Run development server (if applicable)
-	$(PYTHON) manage.py runserver
+serve:  ## Run development server (if applicable)
+	$(POETRY) run python manage.py runservers
