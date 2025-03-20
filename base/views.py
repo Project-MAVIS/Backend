@@ -103,23 +103,15 @@ class DeviceRegistrationView(APIView):
     def post(self, request: Request):
         try:
             # Get required fields from request data
-            username = request.data.get("username")
             device_name = request.data.get("device_name")
+            device_uuid = request.data.get("device_uuid")
             public_key = request.data.get("public_key")
 
             # Validate required fields
-            if not all([username, device_name, public_key]):
+            if not all([device_name, public_key, device_uuid]):
                 return Response(
-                    {"error": "Username, device name and public key are required"},
+                    {"error": "Device name, Device UUID and public key are required"},
                     status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Check if user exists
-            try:
-                user = User.objects.get(username=username)
-            except User.DoesNotExist:
-                return Response(
-                    {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
                 )
 
             # Check if device name already exists for this user
@@ -131,7 +123,9 @@ class DeviceRegistrationView(APIView):
 
             # Create new device key entry
             device_key = DeviceKeys.objects.create(
-                user=user, name=device_name, public_key=public_key
+                name=device_name,
+                uuid=device_uuid,
+                public_key=public_key,
             )
 
             return Response(
@@ -139,7 +133,6 @@ class DeviceRegistrationView(APIView):
                     "message": "Device registered successfully",
                     "device_id": device_key.id,
                     "device_name": device_key.name,
-                    "username": user.username,
                 },
                 status=status.HTTP_201_CREATED,
             )

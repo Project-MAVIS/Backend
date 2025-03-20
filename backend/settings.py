@@ -13,8 +13,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from base.utils import initialize_server_keys
 import os
-import argparse
-import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,15 +28,19 @@ MEDIA_ROOT = BASE_DIR / "media"
 SECRET_KEY = "django-insecure-9o8plk=l!k(7ytpb)6pm@30f(!9pu0*26_b$4imq$v#!$de#$#"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG") or False
 
-ALLOWED_HOSTS = ["localhost", "backend-h2o4.onrender.com", "127.0.0.1"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "backend-h2o4.onrender.com",
+    "c894-2401-4900-1c17-eb29-111-cefb-2859-b750.ngrok-free.app",
+]
 
 try:
     SERVER_PRIVATE_KEY, SERVER_PUBLIC_KEY = initialize_server_keys()
 except ValueError as e:
     print(e)
-    # exit(1)
 
 # Keep this if you want to ensure the logs directory exists
 LOG_FILE_PATH = os.path.join(BASE_DIR, "logs", "server.log")

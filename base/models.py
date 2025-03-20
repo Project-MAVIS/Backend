@@ -6,10 +6,9 @@ from django.dispatch import receiver
 
 
 class DeviceKeys(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.TextField()
+    uuid = models.TextField()
     public_key = models.TextField()
-    private_key = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
