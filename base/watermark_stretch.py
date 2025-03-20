@@ -472,40 +472,6 @@ class WaveletDCTWatermark:
 
         return padded_watermark
 
-    # Modified version that stretches QR code to match original image aspect ratio
-    def stretch_watermark_to_aspect_ratio(self, watermark_image, original_image):
-        """
-        Stretch watermark (QR code) to match the aspect ratio of the original image.
-
-        Args:
-            watermark_image (PIL.Image.Image): The watermark image (typically QR code)
-            original_image (PIL.Image.Image): The original image to match aspect ratio
-
-        Returns:
-            PIL.Image.Image: Stretched watermark image with same aspect ratio as original
-        """
-        # Get original image dimensions and aspect ratio
-        orig_width, orig_height = original_image.size
-        target_ratio = orig_width / orig_height
-
-        # Get watermark dimensions
-        wm_width, wm_height = watermark_image.size
-
-        # Convert to grayscale if not already
-        if watermark_image.mode != "L":
-            watermark_image = watermark_image.convert("L")
-
-        # Calculate new dimensions for stretched watermark with same aspect ratio as original
-        new_wm_width = int(np.round(wm_height * target_ratio))
-        new_wm_height = wm_height
-
-        # Resize the watermark to match the target aspect ratio
-        stretched_watermark = watermark_image.resize(
-            (new_wm_width, new_wm_height), Image.Resampling.LANCZOS
-        )
-
-        return stretched_watermark
-
     def fconvert_image_preserve_ratio(
         self, image: Image.Image, target_size, to_grayscale=False
     ):
@@ -563,10 +529,10 @@ class WaveletDCTWatermark:
             print(f"Error processing image: {str(e)}")
             raise
 
-    def fwatermark_image_v2(self, original_image: Image, watermark: Image):
+    def fwatermark_image(self, original_image: Image, watermark: Image):
         """
         Watermark image received directly from view, returning the watermarked image array.
-        This version stretches the QR code to match the aspect ratio of the original image.
+        This version preserves the aspect ratio of the original image.
 
         Args:
             original_image (PIL.Image.Image): PIL Image object of the original image
@@ -579,48 +545,24 @@ class WaveletDCTWatermark:
             model = "haar"
             level = 1
 
-            # Get original image dimensions and aspect ratio
+            # Get original image dimensions
             orig_width, orig_height = original_image.size
-            orig_ratio = orig_width / orig_height
 
-            # Stretch the watermark (QR code) to match the original image's aspect ratio
-            stretched_watermark = self.stretch_watermark_to_aspect_ratio(
+            # Pad the watermark (QR code) to match the original image's aspect ratio
+            padded_watermark = self.pad_watermark_to_aspect_ratio(
                 watermark, original_image
             )
 
-            # For the original image: preserve aspect ratio and use a size of 2048 for the longest dimension
-            if orig_width >= orig_height:
-                new_width = 2048
-                new_height = int(2048 / orig_ratio)
-            else:
-                new_height = 2048
-                new_width = int(2048 * orig_ratio)
-
-            # Resize original image preserving aspect ratio
-            resized_original = original_image.resize(
-                (new_width, new_height), Image.Resampling.LANCZOS
-            )
-            image_array = np.array(resized_original, dtype=np.float64)
-
-            # For the watermark: preserve the new aspect ratio and use 128 for the longest dimension
-            stretched_width, stretched_height = stretched_watermark.size
-            stretched_ratio = stretched_width / stretched_height
-
-            if stretched_width >= stretched_height:
-                wm_new_width = 128
-                wm_new_height = int(128 / stretched_ratio)
-            else:
-                wm_new_height = 128
-                wm_new_width = int(128 * stretched_ratio)
-
-            # Resize stretched watermark
-            resized_watermark = stretched_watermark.resize(
-                (wm_new_width, wm_new_height), Image.Resampling.LANCZOS
+            # Convert images to arrays, preserving original aspect ratio for the image
+            # Use a size of 2048 for the longest dimension
+            image_array = self.fconvert_image_preserve_ratio(
+                original_image, 2048, to_grayscale=False
             )
 
-            # Enhance QR code contrast
-            resized_watermark = self.enhance_qr_contrast(resized_watermark)
-            watermark_array = np.array(resized_watermark, dtype=np.float64)
+            # For the watermark, we'll use a fixed size of 128 for the longest dimension
+            watermark_array = self.fconvert_image_preserve_ratio(
+                padded_watermark, 128, to_grayscale=True
+            )
 
             # Process wavelet coefficients
             coeffs_image = self.process_coefficients(image_array, model, level)
@@ -792,19 +734,12 @@ class WaveletDCTWatermark:
                             value = value_sum / (count * self.alpha)
                             subwatermarks.append(value)
 
-            # Calculate the dimensions for the recovered watermark (based on aspect ratio of original watermark)
-            # Since we need to reconstruct the watermark, we'll need to infer the aspect ratio
+            # Reshape to closest size that can fit all extracted values
+            total_values = min(len(subwatermarks), watermark_size * watermark_size)
+            side_length = int(np.sqrt(total_values))
 
-            # Get the total number of values we have
-            total_values = len(subwatermarks)
-
-            # If there are enough values, reshape to a rectangle with approximately the right aspect ratio
-            if total_values > 0:
-                # We'll use a square for simplicity in this implementation
-                # A more complex implementation could try to remember the original watermark aspect ratio
-                side_length = int(np.sqrt(total_values))
-
-                # Reshape to square
+            # If we have enough values to form a square
+            if side_length > 0:
                 watermark = np.array(
                     subwatermarks[: side_length * side_length]
                 ).reshape(side_length, side_length)
