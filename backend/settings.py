@@ -31,6 +31,7 @@ SECRET_KEY = "django-insecure-9o8plk=l!k(7ytpb)6pm@30f(!9pu0*26_b$4imq$v#!$de#$#
 DEBUG = os.environ.get("DEBUG") or False
 
 ALLOWED_HOSTS = [
+    "*",
     "localhost",
     "127.0.0.1",
     "backend-h2o4.onrender.com",

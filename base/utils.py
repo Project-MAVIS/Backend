@@ -40,25 +40,32 @@ def generate_key_pair():
 
 
 def verify_signature(public_key_pem: PublicKeyTypes, signature, data):
+    logger.V(2).info(f"Public key PEM: {public_key_pem}")
     try:
-        public_key = serialization.load_pem_public_key(
-            public_key_pem.encode(), backend=default_backend()
-        )
+        public_key = ec.EllipticCurvePublicKey.from_encoded_point(
+            ec.SECP256R1(), base64.b64decode(public_key_pem))
+
+        logger.V(4).info(f"Public key: {public_key}")
 
         public_key.verify(
             signature,
             data,
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH
-            ),
+            # padding.PSS(
+            #     mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH
+            # ),
             ec.ECDSA(hashes.SHA256()),
         )
-        return True
-    except:
+        return True 
+    except Exception as e:
+        logger.V(2).error(f"Signature verification failed: {e}")
         return False
 
 
 def encrypt_string(plain_text: str, public_key: rsa.RSAPublicKey) -> str:
+    print(type(public_key), public_key.key_size)
+    print(plain_text)
+    print(len(plain_text.encode("utf-8")))  # Should be ≤190 bytes for RSA-2048
+
     """Encrypts a given string using the RSA public key."""
     plain_text_bytes = plain_text.encode("utf-8")
 
@@ -203,6 +210,168 @@ def calculate_string_hash(input_string: str) -> str:
     hash = hashlib.sha256(input_string.encode()).hexdigest()
     logger.V(2).info(f"String hash: {hash}")
     return hash
+
+def verify_apple_signature(data, base64_public_key, base64_signature):
+    """
+    Verify a signature created by Apple's SecKeyCreateSignature function
+    
+    Args:
+        data (bytes): The original data that was signed
+        base64_public_key (str): Base64-encoded public key from SecKeyCopyExternalRepresentation
+        base64_signature (str): Base64-encoded signature from SecKeyCreateSignature
+        
+    Returns:
+        bool: True if signature is valid, False otherwise
+    """
+    import base64
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.serialization import load_pem_public_key
+    from cryptography.exceptions import InvalidSignature
+    
+    try:
+        # Clean up and fix base64 strings
+        def fix_base64(b64str):
+            # Remove whitespace, newlines, and PEM headers if present
+            b64str = ''.join([line for line in b64str.splitlines() 
+                              if not line.startswith('-----') and not line.endswith('-----')])
+            b64str = b64str.replace(' ', '').replace('\n', '')
+            
+            # Add padding if needed
+            padding = len(b64str) % 4
+            if padding > 0:
+                b64str += '=' * (4 - padding)
+                
+            return b64str
+        
+        # Fix the base64 strings
+        base64_public_key = fix_base64(base64_public_key)
+        base64_signature = fix_base64(base64_signature)
+        
+        # Convert the key and decode the signature
+        pem_key = convert_apple_ec_key_to_pem(base64_public_key)
+        signature = base64.b64decode(base64_signature)
+        
+        # Load the public key
+        public_key = load_pem_public_key(pem_key.encode())
+        
+        # The Swift code uses X9.62 (ASN.1 DER) format for the signature
+        from asn1crypto.core import Sequence, Integer
+        
+        # Parse the ASN.1 DER signature
+        class ECDSASignature(Sequence):
+            _fields = [
+                ('r', Integer),
+                ('s', Integer)
+            ]
+        
+        parsed_sig = ECDSASignature.load(signature)
+        r = int(parsed_sig['r'].native)
+        s = int(parsed_sig['s'].native)
+        
+        # Recreate the signature in the format needed for verification
+        from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
+        reconstructed_sig = encode_dss_signature(r, s)
+        
+        # Verify the signature
+        public_key.verify(
+            reconstructed_sig,
+            data,
+            ec.ECDSA(hashes.SHA256())
+        )
+        return True
+    
+    except InvalidSignature:
+        return False
+    except Exception as e:
+        print(f"Verification error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def convert_apple_ec_key_to_pem(base64_key):
+    """
+    Convert an Apple EC public key (from SecKeyCopyExternalRepresentation) to PEM format
+    
+    Args:
+        base64_key (str): Base64-encoded key string from Apple's APIs
+        
+    Returns:
+        str: The key in PEM format that can be used with Python's cryptography
+    """
+    import base64
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    
+    # Decode the base64 data
+    raw_key_data = base64.b64decode(base64_key)
+    
+    # Apple's SecKeyCopyExternalRepresentation returns EC keys in X9.62 format
+    # The format for uncompressed keys is: 0x04 + x-coordinate + y-coordinate
+    
+    # Check if this looks like an uncompressed EC key
+    if len(raw_key_data) >= 65 and raw_key_data[0] == 0x04:
+        # Assuming a P-256 key (most common)
+        if len(raw_key_data) == 65:  # 1 byte header + 32 bytes x + 32 bytes y
+            curve = ec.SECP256R1()
+            key_size = 32
+        elif len(raw_key_data) == 97:  # 1 byte header + 48 bytes x + 48 bytes y
+            curve = ec.SECP384R1()
+            key_size = 48
+        elif len(raw_key_data) == 133:  # 1 byte header + 66 bytes x + 66 bytes y
+            curve = ec.SECP521R1()
+            key_size = 66
+        else:
+            raise ValueError(f"Unsupported key size: {len(raw_key_data)}")
+        
+        # Extract x and y coordinates (skip the first byte which is the format byte)
+        x = int.from_bytes(raw_key_data[1:1+key_size], byteorder='big')
+        y = int.from_bytes(raw_key_data[1+key_size:], byteorder='big')
+        
+        # Create the EC public key object
+        public_key = ec.EllipticCurvePublicNumbers(x, y, curve).public_key()
+        
+        # Serialize to PEM
+        pem_key = public_key.public_bytes(
+            encoding=Encoding.PEM,
+            format=PublicFormat.SubjectPublicKeyInfo
+        )
+        
+        return pem_key.decode('ascii')
+    else:
+        # If it's not in the expected format, try to see if it's already in DER/SPKI format
+        try:
+            from cryptography.hazmat.primitives.serialization import load_der_public_key
+            public_key = load_der_public_key(raw_key_data)
+            pem_key = public_key.public_bytes(
+                encoding=Encoding.PEM,
+                format=PublicFormat.SubjectPublicKeyInfo
+            )
+            return pem_key.decode('ascii')
+        except Exception:
+            # As a last resort, try to construct a SubjectPublicKeyInfo structure
+            from cryptography.hazmat.primitives.serialization import load_der_public_key
+            from asn1crypto.keys import ECPointBitString, ECDomainParameters, PublicKeyInfo, PublicKeyAlgorithm
+            from asn1crypto.algos import AlgorithmIdentifier
+            
+            # Default to P-256 parameters
+            params = {'named': 'secp256r1'}
+            alg_id = {'algorithm': 'ec', 'parameters': params}
+            
+            # Create the public key info
+            key_info = {'algorithm': alg_id, 'public_key': raw_key_data}
+            der_key = PublicKeyInfo(key_info).dump()
+            
+            try:
+                public_key = load_der_public_key(der_key)
+                pem_key = public_key.public_bytes(
+                    encoding=Encoding.PEM,
+                    format=PublicFormat.SubjectPublicKeyInfo
+                )
+                return pem_key.decode('ascii')
+            except Exception as e:
+                raise ValueError(f"Could not parse key data: {e}")
+
 
 
 # metadata = {

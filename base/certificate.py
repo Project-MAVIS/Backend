@@ -64,19 +64,19 @@ def calculate_cert_length(username: str, device_name: str) -> int:
 def create_certificate(
     image: Image, device_key: DeviceKeys, timestamp: int = int(time.time())
 ) -> str:
-    user: User = image.device_key.user
+    # user: User = image.device_key.name
     time_stamp = timestamp
     image_id = image.id
-    user_id = user.id
+    # user_id = user.id
     device_key_id = device_key.id
-    user_name = user.username
-    device_name = device_key.name
+    user_name = image.device_key.name
+    device_name = device_key.uuid[:20]
 
     cert = ImageCertificate(
         cert_len=calculate_cert_length(username=user_name, device_name=device_name),
         timestamp=time_stamp,
         image_id=image_id,
-        user_id=user_id,
+        user_id=0x0,
         device_id=device_key_id,
         username=user_name,
         device_name=device_name,

@@ -153,6 +153,12 @@ class ImageUploadView(generics.CreateAPIView):
 
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        
+        print("====================================")
+        print(request.data)
+        print(request.data.get("image").__dict__)
+        print("====================================")
+
         serializer.is_valid(raise_exception=True)
         FORMAT = request.data.get("format")
 
@@ -162,9 +168,11 @@ class ImageUploadView(generics.CreateAPIView):
             logger.V(3).info(f"dev_signed_img_hash: {dev_signed_img_hash}")
 
             # Get the image object
-            image_obj = serializer.validated_data["image"]
+            image_obj = request.data.get("image")
             image_hash = hashlib.sha256(image_obj.read()).hexdigest()
             logger.V(3).info(f"calculated image hash: {image_hash}")
+
+            image_obj.seek(0)
 
             device_name = request.data.get("device_name")
             logger.V(3).info(f"device_name: {device_name}")
@@ -181,22 +189,32 @@ class ImageUploadView(generics.CreateAPIView):
                 return Response(
                     {"error": "DeviceKeys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
+            
+            public_key = device_key.public_key.replace("\n", "")
 
-            if verify_signature(
-                device_key.public_key, dev_signed_img_hash, image_hash.encode()
+            print(f"image: {request.data.get('image')} type: {type(request.data.get('image'))}")
+            print(f"public_key: {device_key.public_key} type: {type(device_key.public_key)}")
+            print(f"image_hash: {request.data.get('image_hash')} type: {type(request.data.get('image_hash'))}")
+
+            if verify_apple_signature(
+                request.data.get("image").read(), device_key.public_key, request.data.get('image_hash')
             ):
+                print("Signature verified")
                 # Save the original image first
                 image_object = serializer.save(
                     device_key=device_key, verified=False, image_hash=image_hash
                 )
 
+                print(2)
                 # Make the certificate, sign the certificate
                 img_cert = create_certificate(image_object, device_key)
                 logger.V(3).info(f"img_cert: {img_cert}")
 
+                print(3)                
                 enc_img_cert = encrypt_string(img_cert, settings.SERVER_PUBLIC_KEY)
                 logger.V(3).info(f"enc_img_cert: {enc_img_cert}")
 
+                print(4)
                 # Calculate the hash of the certificate
                 cert_hash = calculate_string_hash(img_cert)
                 logger.V(3).info(f"cert_hash: {cert_hash}")
@@ -207,6 +225,7 @@ class ImageUploadView(generics.CreateAPIView):
                 final_cert_qr_code.png(buffer, scale=8)
                 buffer.seek(0)
 
+                print(1)
                 # Create watermarked version with embedded certificate
                 wm = WaveletDCTWatermark()
                 watermarked_img_array = wm.fwatermark_image(
@@ -214,6 +233,7 @@ class ImageUploadView(generics.CreateAPIView):
                     watermark=PILImage.open(buffer),
                 )
 
+                print(5)
                 # Add certificate metadata to watermarked image
                 metadata = {
                     "0th": {
@@ -221,11 +241,14 @@ class ImageUploadView(generics.CreateAPIView):
                     }
                 }
 
+                print(6)
                 watermarked_img_w_metadata, image_buffer = add_exif_to_array_image(
                     array=watermarked_img_array, exif_dict=metadata
                 )
 
                 new_hash = calculate_image_hash(watermarked_img_w_metadata)
+
+                print(9)
 
                 # Save watermarked version to db
                 watermarked_image_obj = models.Image(
@@ -238,16 +261,21 @@ class ImageUploadView(generics.CreateAPIView):
                     original_image_hash=image_hash,
                     verified=True,
                 )
-                watermarked_image_obj.save()
+                print(12)
 
+                watermarked_image_obj.save()
                 # Save the watermarked image as a PNG to local disk
                 # TODO: Migrate this to Azure Blob
-                watermarked_img_w_metadata.save(
-                    Path.cwd() / "media" / "temp" / watermarked_image_obj.image.name,
-                    format=FORMAT,
-                    optimize=True,
-                    exif=piexif.dump(metadata),
-                )
+                # NO
+                print(12.5)
+                
+                # watermarked_img_w_metadata.save(
+                #     Path.cwd() / "media" / "temp" / watermarked_image_obj.image.name,
+                #     format=FORMAT,
+                #     optimize=True,
+                #     exif=piexif.dump(metadata),
+                # )
+                print(13)
 
                 logger.V(3).info(
                     f"Watermarked Image Saved Path: {watermarked_image_obj.image.path}"
