@@ -178,18 +178,26 @@ class ImageUploadView(generics.CreateAPIView):
             logger.V(3).info(f"device_name: {device_name}")
 
             if not device_name:
+                print(f"DEBUG: {device_name}")
                 return Response(
                     {"error": "device name is required"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            
+            print("101")
 
             try:
+                print(103)
                 device_key = DeviceKeys.objects.get(name=device_name)
+                print(104)
             except DeviceKeys.DoesNotExist:
+                print(105)
                 return Response(
                     {"error": "DeviceKeys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
             
+            print(102)
+
             public_key = device_key.public_key.replace("\n", "")
 
             print(f"image: {request.data.get('image')} type: {type(request.data.get('image'))}")
@@ -263,23 +271,22 @@ class ImageUploadView(generics.CreateAPIView):
                 )
                 print(12)
 
-                watermarked_image_obj.save()
+                try:
+                    watermarked_image_obj.save()
+                except Exception as e:
+                    logger.error(f"Error saving watermarked image: {str(e)}")
+                    # return Response(
+                    #     {"error": f"Error saving watermarked image: {str(e)}"},
+                    #     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    # )
                 # Save the watermarked image as a PNG to local disk
                 # TODO: Migrate this to Azure Blob
                 # NO
-                print(12.5)
-                
-                # watermarked_img_w_metadata.save(
-                #     Path.cwd() / "media" / "temp" / watermarked_image_obj.image.name,
-                #     format=FORMAT,
-                #     optimize=True,
-                #     exif=piexif.dump(metadata),
-                # )
                 print(13)
 
-                logger.V(3).info(
-                    f"Watermarked Image Saved Path: {watermarked_image_obj.image.path}"
-                )
+                # logger.V(3).info(
+                #     f"Watermarked Image Saved Path: {watermarked_image_obj.image.path}"
+                # )
 
                 # Generate download link
                 download_url = request.build_absolute_uri(
@@ -591,11 +598,15 @@ class ImageLinkProvider(APIView):
 
 class ImageDownloadView(APIView):
     def get(self, request, image_id):
+        print(0)
         try:
             # Get the image object
+            print(1)
             image = Image.objects.get(id=image_id)
+            print(2)
 
             if not os.path.exists(image.image.path):
+                print("NOT found")
                 return Response(
                     {"error": "Image file not found"}, status=status.HTTP_404_NOT_FOUND
                 )
@@ -632,10 +643,14 @@ class ImageDownloadView(APIView):
 
 class ImageListView(generics.ListAPIView):
     serializer_class = ImageSerializer
-    permission_classes = (permissions.IsAuthenticated,)
+    # permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
-        return Image.objects.filter(user=self.request.user)
+        a = ImageSerializer()
+        query_set = a.Meta.model.objects.all()
+        # Serialize the queryset
+
+        return query_set
 
 
 class CalculateImageHashView(generics.CreateAPIView):
