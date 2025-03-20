@@ -6,7 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .utils import *
-from .watermark import WaveletDCTWatermark
+from .watermark_topleft import WaveletDCTWatermark
 
 
 class UtilsTests(TestCase):

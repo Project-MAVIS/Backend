@@ -153,7 +153,7 @@ class ImageUploadView(generics.CreateAPIView):
 
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        
+
         print("====================================")
         print(request.data)
         print(request.data.get("image").__dict__)
@@ -189,15 +189,23 @@ class ImageUploadView(generics.CreateAPIView):
                 return Response(
                     {"error": "DeviceKeys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
-            
+
             public_key = device_key.public_key.replace("\n", "")
 
-            print(f"image: {request.data.get('image')} type: {type(request.data.get('image'))}")
-            print(f"public_key: {device_key.public_key} type: {type(device_key.public_key)}")
-            print(f"image_hash: {request.data.get('image_hash')} type: {type(request.data.get('image_hash'))}")
+            print(
+                f"image: {request.data.get('image')} type: {type(request.data.get('image'))}"
+            )
+            print(
+                f"public_key: {device_key.public_key} type: {type(device_key.public_key)}"
+            )
+            print(
+                f"image_hash: {request.data.get('image_hash')} type: {type(request.data.get('image_hash'))}"
+            )
 
             if verify_apple_signature(
-                request.data.get("image").read(), device_key.public_key, request.data.get('image_hash')
+                request.data.get("image").read(),
+                device_key.public_key,
+                request.data.get("image_hash"),
             ):
                 print("Signature verified")
                 # Save the original image first
@@ -210,7 +218,7 @@ class ImageUploadView(generics.CreateAPIView):
                 img_cert = create_certificate(image_object, device_key)
                 logger.V(3).info(f"img_cert: {img_cert}")
 
-                print(3)                
+                print(3)
                 enc_img_cert = encrypt_string(img_cert, settings.SERVER_PUBLIC_KEY)
                 logger.V(3).info(f"enc_img_cert: {enc_img_cert}")
 
@@ -268,7 +276,7 @@ class ImageUploadView(generics.CreateAPIView):
                 # TODO: Migrate this to Azure Blob
                 # NO
                 print(12.5)
-                
+
                 # watermarked_img_w_metadata.save(
                 #     Path.cwd() / "media" / "temp" / watermarked_image_obj.image.name,
                 #     format=FORMAT,
