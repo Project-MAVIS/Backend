@@ -93,12 +93,24 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+DATABASES_NAME = os.environ.get("DATABASES_NAME")
+DATABASES_USER = os.environ.get("DATABASES_USER")
+DATABASES_PASSWORD = os.environ.get("DATABASES_PASSWORD")
+DATABASES_HOST = os.environ.get("DATABASES_HOST")
+DATABASES_PORT = os.environ.get("DATABASES_PORT")
+
+#setup the database with your credential
+DATABASES = { 
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': DATABASES_NAME,
+        'USER': DATABASES_USER,
+        'PASSWORD': DATABASES_PASSWORD,
+        'HOST': DATABASES_HOST,
+        'PORT': DATABASES_PORT,
+    },
 }
+
 
 
 # Password validation
@@ -143,3 +155,4 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+os.environ.get
