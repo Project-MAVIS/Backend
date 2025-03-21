@@ -100,16 +100,14 @@ DATABASES_PASSWORD = os.environ.get("DATABASES_PASSWORD")
 DATABASES_HOST = os.environ.get("DATABASES_HOST")
 DATABASES_PORT = os.environ.get("DATABASES_PORT")
 
-# setup the database with your credential
+# Database
+# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+# Keep this for a completely local setup including db
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": DATABASES_NAME,
-        "USER": DATABASES_USER,
-        "PASSWORD": DATABASES_PASSWORD,
-        "HOST": DATABASES_HOST,
-        "PORT": DATABASES_PORT,
-    },
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 
