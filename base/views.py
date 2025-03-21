@@ -296,10 +296,15 @@ class ImageUploadView(generics.CreateAPIView):
                     )
                 )
 
+                original_img_url = request.build_absolute_uri(
+                    reverse("download-image", kwargs={"image_id": image_object.id})
+                )
+
                 return Response(
                     {
                         "message": "Image verified successfully",
                         "download_url": download_url,
+                        "original_img_url": original_img_url,
                     },
                     status=status.HTTP_201_CREATED,
                 )
