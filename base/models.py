@@ -19,6 +19,8 @@ class Image(models.Model):
     device_key = models.ForeignKey(DeviceKeys, on_delete=models.CASCADE)
     image = models.ImageField(upload_to="images/")
     image_hash = models.TextField()
+    mavis_cert = models.TextField(null=True)
+    mavis_cert_hash = models.TextField(null=True)
     original_image_hash = models.TextField(null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     verified = models.BooleanField(default=False)

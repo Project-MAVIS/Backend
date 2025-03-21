@@ -267,6 +267,8 @@ class ImageUploadView(generics.CreateAPIView):
                     ),
                     image_hash=new_hash,
                     original_image_hash=image_hash,
+                    mavis_cert=img_cert,
+                    mavis_cert_hash=cert_hash,
                     verified=True,
                 )
                 print(12)
