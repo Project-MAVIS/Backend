@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-MEDIA_ROOT = os.path.join(BASE_DIR, "media") 
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 # MEDIA_URL = os.environ.get("SUPABASE_S3_ENDPOINT")
@@ -87,15 +87,15 @@ DATABASES_PASSWORD = os.environ.get("DATABASES_PASSWORD")
 DATABASES_HOST = os.environ.get("DATABASES_HOST")
 DATABASES_PORT = os.environ.get("DATABASES_PORT")
 
-#setup the database with your credential
-DATABASES = { 
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': DATABASES_NAME,
-        'USER': DATABASES_USER,
-        'PASSWORD': DATABASES_PASSWORD,
-        'HOST': DATABASES_HOST,
-        'PORT': DATABASES_PORT,
+# setup the database with your credential
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": DATABASES_NAME,
+        "USER": DATABASES_USER,
+        "PASSWORD": DATABASES_PASSWORD,
+        "HOST": DATABASES_HOST,
+        "PORT": DATABASES_PORT,
     },
 }
 
@@ -114,7 +114,6 @@ STORAGES = {
         },
     },
 }
-
 
 
 # Password validation

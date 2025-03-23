@@ -153,7 +153,7 @@ class ImageUploadView(generics.CreateAPIView):
 
     def create(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        
+
         print("====================================")
         print(request.data)
         print(request.data.get("image").__dict__)
@@ -183,7 +183,7 @@ class ImageUploadView(generics.CreateAPIView):
                     {"error": "device name is required"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             print("101")
 
             try:
@@ -195,17 +195,23 @@ class ImageUploadView(generics.CreateAPIView):
                 return Response(
                     {"error": "DeviceKeys not found"}, status=status.HTTP_404_NOT_FOUND
                 )
-            
-            print(102)
 
             public_key = device_key.public_key.replace("\n", "")
 
-            print(f"image: {request.data.get('image')} type: {type(request.data.get('image'))}")
-            print(f"public_key: {device_key.public_key} type: {type(device_key.public_key)}")
-            print(f"image_hash: {request.data.get('image_hash')} type: {type(request.data.get('image_hash'))}")
+            print(
+                f"image: {request.data.get('image')} type: {type(request.data.get('image'))}"
+            )
+            print(
+                f"public_key: {device_key.public_key} type: {type(device_key.public_key)}"
+            )
+            print(
+                f"image_hash: {request.data.get('image_hash')} type: {type(request.data.get('image_hash'))}"
+            )
 
             if verify_apple_signature(
-                request.data.get("image").read(), device_key.public_key, request.data.get('image_hash')
+                request.data.get("image").read(),
+                device_key.public_key,
+                request.data.get("image_hash"),
             ):
                 print("Signature verified")
                 # Save the original image first
@@ -218,7 +224,7 @@ class ImageUploadView(generics.CreateAPIView):
                 img_cert = create_certificate(image_object, device_key)
                 logger.V(3).info(f"img_cert: {img_cert}")
 
-                print(3)                
+                print(3)
                 enc_img_cert = encrypt_string(img_cert, settings.SERVER_PUBLIC_KEY)
                 logger.V(3).info(f"enc_img_cert: {enc_img_cert}")
 
@@ -281,8 +287,13 @@ class ImageUploadView(generics.CreateAPIView):
                     # )
                 # Save the watermarked image as a PNG to local disk
                 # TODO: Migrate this to Azure Blob
-                # NO
-                print(13)
+
+                # watermarked_img_w_metadata.save(
+                #     Path.cwd() / "media" / "temp" / watermarked_image_obj.image.name,
+                #     format=FORMAT,
+                #     optimize=True,
+                #     exif=piexif.dump(metadata),
+                # )
 
                 # logger.V(3).info(
                 #     f"Watermarked Image Saved Path: {watermarked_image_obj.image.path}"
@@ -295,10 +306,15 @@ class ImageUploadView(generics.CreateAPIView):
                     )
                 )
 
+                original_img_url = request.build_absolute_uri(
+                    reverse("download-image", kwargs={"image_id": image_object.id})
+                )
+
                 return Response(
                     {
                         "message": "Image verified successfully",
                         "download_url": download_url,
+                        "original_img_url": original_img_url,
                     },
                     status=status.HTTP_201_CREATED,
                 )
