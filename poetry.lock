@@ -2027,6 +2027,18 @@ files = [
 cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
+name = "reedsolo"
+version = "1.7.0"
+description = "Pure-Python Reed Solomon encoder/decoder"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "reedsolo-1.7.0-py3-none-any.whl", hash = "sha256:2b6a3e402a1ee3e1eea3f932f81e6c0b7bbc615588074dca1dbbcdeb055002bd"},
+    {file = "reedsolo-1.7.0.tar.gz", hash = "sha256:c1359f02742751afe0f1c0de9f0772cc113835aa2855d2db420ea24393c87732"},
+]
+
+[[package]]
 name = "referencing"
 version = "0.36.2"
 description = "JSON Referencing + Python"
@@ -2568,4 +2580,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "c9eb15c2a9ce88aa8c89d859e7aea9bc3d7a6136d5685a9c8e4435b5959855c8"
+content-hash = "7717dbd415e37a5f8c799758171b49e45a1e627908a5d416a070cd0731131bde"
