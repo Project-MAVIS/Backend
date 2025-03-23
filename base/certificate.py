@@ -30,6 +30,17 @@ username: {self.username}
 device_name: {self.device_name}
 """
 
+    def __str__(self) -> str:
+        return f"""
+cert_len: {self.cert_len}
+timestamp: {self.timestamp}
+image_id: {self.image_id}
+user_id: {self.user_id}
+device_id: {self.device_id}
+username: {self.username}
+device_name: {self.device_name}
+"""
+
 
 def calculate_cert_length(username: str, device_name: str) -> int:
     """
@@ -81,6 +92,8 @@ def create_certificate(
         username=user_name,
         device_name=device_name,
     )
+
+    logger.V(2).info(f"Created certificate: {cert}")
 
     serialized_data = serialize_certificate(cert)
     logger.V(2).info(f"Serialized certificate (hex): {serialized_data.hex()}")
