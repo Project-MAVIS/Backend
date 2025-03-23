@@ -80,40 +80,56 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+DATABASES = {}
 
-DATABASES_NAME = os.environ.get("DATABASES_NAME")
-DATABASES_USER = os.environ.get("DATABASES_USER")
-DATABASES_PASSWORD = os.environ.get("DATABASES_PASSWORD")
-DATABASES_HOST = os.environ.get("DATABASES_HOST")
-DATABASES_PORT = os.environ.get("DATABASES_PORT")
+LOCAL_DB = os.getenv("LOCAL_DB", "False").lower() in ("true", "1", "yes")
 
-# setup the database with your credential
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": DATABASES_NAME,
-        "USER": DATABASES_USER,
-        "PASSWORD": DATABASES_PASSWORD,
-        "HOST": DATABASES_HOST,
-        "PORT": DATABASES_PORT,
-    },
-}
+# Use sqlite3 for local development
+if LOCAL_DB:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+# Use postgres for production (Supabase)
+else:
+    DATABASES_NAME = os.environ.get("DATABASES_NAME")
+    DATABASES_USER = os.environ.get("DATABASES_USER")
+    DATABASES_PASSWORD = os.environ.get("DATABASES_PASSWORD")
+    DATABASES_HOST = os.environ.get("DATABASES_HOST")
+    DATABASES_PORT = os.environ.get("DATABASES_PORT")
 
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-    "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "access_key": os.environ.get("SUPABASE_S3_ACCESS_KEY_ID"),
-            "secret_key": os.environ.get("SUPABASE_S3_ACCESS_KEY"),
-            "bucket_name": os.environ.get("SUPABASE_S3_BUCKET_NAME"),
-            "region_name": os.environ.get("SUPABASE_S3_REGION_NAME"),
-            "endpoint_url": os.environ.get("SUPABASE_S3_ENDPOINT"),
+    # setup the database with your credential
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql_psycopg2",
+            "NAME": DATABASES_NAME,
+            "USER": DATABASES_USER,
+            "PASSWORD": DATABASES_PASSWORD,
+            "HOST": DATABASES_HOST,
+            "PORT": DATABASES_PORT,
         },
-    },
-}
+    }
+
+# Keeping local storage as True for now (till supabase Blob storage gets fixed)
+LOCAL_STORAGE = os.getenv("LOCAL_STORAGE", "False").lower() in ("true", "1", "yes")
+if LOCAL_STORAGE:
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "access_key": os.environ.get("SUPABASE_S3_ACCESS_KEY_ID"),
+                "secret_key": os.environ.get("SUPABASE_S3_ACCESS_KEY"),
+                "bucket_name": os.environ.get("SUPABASE_S3_BUCKET_NAME"),
+                "region_name": os.environ.get("SUPABASE_S3_REGION_NAME"),
+                "endpoint_url": os.environ.get("SUPABASE_S3_ENDPOINT"),
+            },
+        },
+    }
 
 
 # Password validation
