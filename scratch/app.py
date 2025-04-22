@@ -4,6 +4,7 @@ from PIL import Image
 import numpy as np
 import os
 import io  # Needed for in-memory compression
+import tempfile
 
 # Import the backend functions
 import steganography as steg
@@ -25,6 +26,7 @@ DEFAULT_ALPHA = 10.0
 DEFAULT_WAVELET = "db4"
 DEFAULT_SUBBAND = "HL"
 DEFAULT_JPEG_QUALITY = 75  # Default quality for JPEG test
+DOWNLOAD_JPEG_QUALITY = 95  # Quality for JPEG downloads (can be high)
 
 # Get a list of available discrete wavelets from PyWavelets
 available_wavelets = pywt.wavelist(kind="discrete")
@@ -38,11 +40,31 @@ if DEFAULT_WAVELET not in common_wavelets:
 
 available_subbands = ["HL", "LH", "HH"]
 
+
+def save_to_temp_jpeg(image_pil, base_name="output"):
+    """Saves a PIL image to a temporary JPEG file and returns the path."""
+    if image_pil is None:
+        return None
+    try:
+        # Ensure image is RGB for JPEG saving
+        img_rgb = image_pil.convert("RGB")
+
+        with tempfile.NamedTemporaryFile(
+            suffix=".jpg", prefix=base_name + "_", delete=False
+        ) as temp_file:
+            img_rgb.save(temp_file.name, format="JPEG", quality=DOWNLOAD_JPEG_QUALITY)
+            return temp_file.name
+    except Exception as e:
+        print(f"Error saving temporary JPEG file ({base_name}): {e}")
+        return None
+
+
 # --- Gradio Interface Functions ---
 
 
 def embed_interface(image, alpha, wavelet, subband):
     """Gradio wrapper for embedding."""
+    download_path = None
     if image is None:
         return None, "Please upload an image first."
     if not isinstance(image, Image.Image):
@@ -57,15 +79,22 @@ def embed_interface(image, alpha, wavelet, subband):
         wavelet_type=wavelet,
         embed_subband=subband,
     )
-    # Add note about saving as PNG
+
     if stego_image is not None:
-        status += "\n\nRecommendation: Download this image and save as PNG for lossless storage before compression testing or extraction."
-    return stego_image, status
+        status += "\n\nRecommendation: Use the download link for a high-quality JPEG."
+        # Save to temp file for download
+        download_path = save_to_temp_jpeg(stego_image, "stego_image")
+        if not download_path:
+            status += "\nError creating download file."
+
+    # Return PIL for display, status string, path for gr.File
+    return stego_image, status, download_path
 
 
 def extract_interface(stego_image, alpha, wavelet, subband):
     """Gradio wrapper for extraction AND decoding."""
     decoded_text_output = "QR Decoding disabled: QReader library not found."
+    download_path = None
     if stego_image is None:
         return None, "Please upload the stego image first.", decoded_text_output
 
@@ -85,6 +114,9 @@ def extract_interface(stego_image, alpha, wavelet, subband):
 
     # --- Add QR Decoding Step ---
     if extracted_qr_image is not None and qreader_available:
+        download_path = save_to_temp_jpeg(extracted_qr_image, "extracted_qr")
+        if not download_path:
+            status += "\nError creating QR download file."
         try:
             qr_np_array = np.array(extracted_qr_image.convert("L"))
             reader = QReader()
@@ -109,13 +141,15 @@ def extract_interface(stego_image, alpha, wavelet, subband):
         status += "\nQR decoding skipped (QReader not installed)."
     elif extracted_qr_image is None:
         decoded_text_output = "Extraction failed, cannot decode QR."
+        download_path = None
 
-    return extracted_qr_image, status, decoded_text_output
+    return extracted_qr_image, status, decoded_text_output, download_path
 
 
 # --- NEW: JPEG Compression Function ---
 def compress_image_jpeg(input_image, quality):
     """Applies JPEG compression to an image and returns it + info."""
+    download_path = None
     if input_image is None:
         return None, "Please upload an image first."
 
@@ -159,11 +193,24 @@ def compress_image_jpeg(input_image, quality):
         compressed_image = Image.open(jpeg_buffer)
         info_str += "Compression successful."
 
+        # 4. Save to temp file for download link using the same compression settings
+        with tempfile.NamedTemporaryFile(
+            suffix=".jpg", prefix="compressed_", delete=False
+        ) as temp_file:
+            jpeg_buffer.seek(0)  # Rewind buffer
+            temp_file.write(jpeg_buffer.read())  # Write compressed data
+            download_path = temp_file.name
+
     except Exception as e:
         info_str = f"Error during compression: {e}"
+        download_path = None
+        if "png_buffer" in locals() and not png_buffer.closed:
+            png_buffer.close()
+        if "jpeg_buffer_display" in locals() and not jpeg_buffer.closed:
+            jpeg_buffer.close()
         compressed_image = None  # Ensure no image is returned on error
 
-    return compressed_image, info_str
+    return compressed_image, info_str, download_path
 
 
 # --- Build Gradio UI ---
@@ -205,13 +252,15 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                     embed_button = gr.Button("Embed QR Code", variant="primary")
                 with gr.Column(scale=1):
                     embed_output_image = gr.Image(
-                        type="pil", label="Stego Image (with embedded QR)"
+                        type="pil", label="Stego Image (Display)"
                     )
+                    # ADDED: File output for download
+                    embed_download = gr.File(label="Download Stego Image (JPEG)")
                     embed_status = gr.Textbox(
-                        label="Status / Log", lines=10, interactive=False
-                    )
+                        label="Status / Log", lines=8, interactive=False
+                    )  # Adjusted lines
 
-        # --- Compress Tab (NEW) ---
+        # --- Compress Tab ---
         with gr.TabItem("2. JPEG Compression Test"):
             with gr.Row():
                 with gr.Column(scale=1):
@@ -228,13 +277,17 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                     compress_button = gr.Button("Compress Image", variant="primary")
                 with gr.Column(scale=1):
                     compress_output_image = gr.Image(
-                        type="pil", label="Compressed Image (JPEG)"
+                        type="pil", label="Compressed Image (Display)"
+                    )
+                    # ADDED: File output for download
+                    compress_download = gr.File(
+                        label="Download Compressed Image (JPEG)"
                     )
                     compress_status = gr.Textbox(
-                        label="Compression Info", lines=6, interactive=False
-                    )
+                        label="Compression Info", lines=5, interactive=False
+                    )  # Adjusted lines
             gr.Markdown(
-                "*(Use this compressed image in the 'Extract' tab to test robustness)*"
+                "*(Use the downloaded JPEG or the displayed image in the 'Extract' tab to test robustness)*"
             )
 
         # --- Extract Tab ---
@@ -242,8 +295,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             with gr.Row():
                 with gr.Column(scale=1):
                     extract_input_image = gr.Image(
-                        type="pil",
-                        label="Upload Stego Image (Original PNG or Compressed JPEG)",
+                        type="pil", label="Upload Stego Image (Original or Compressed)"
                     )
                     gr.Markdown("👇 **Use the SAME parameters as embedding!** 👇")
                     extract_alpha = gr.Slider(
@@ -266,33 +318,47 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                     extract_button = gr.Button("Extract QR Code", variant="primary")
                 with gr.Column(scale=1):
                     extract_output_image = gr.Image(
-                        type="pil", label="Extracted QR Code Image"
+                        type="pil", label="Extracted QR Code Image (Display)"
                     )
+                    # ADDED: File output for QR download
+                    extract_download = gr.File(label="Download QR Code (JPEG)")
                     extract_decoded_text = gr.Textbox(
                         label="Decoded QR Content", lines=3, interactive=False
                     )
                     extract_status = gr.Textbox(
-                        label="Status / Log", lines=7, interactive=False
-                    )
+                        label="Status / Log", lines=5, interactive=False
+                    )  # Adjusted lines
 
-    # --- Connect Components ---
+    # --- Connect Components (Updated Outputs) ---
     embed_button.click(
         fn=embed_interface,
         inputs=[embed_input_image, embed_alpha, embed_wavelet, embed_subband],
-        outputs=[embed_output_image, embed_status],
+        outputs=[
+            embed_output_image,
+            embed_status,
+            embed_download,
+        ],  # Added embed_download
     )
 
-    # NEW: Connect compression button
     compress_button.click(
         fn=compress_image_jpeg,
         inputs=[compress_input_image, compress_quality],
-        outputs=[compress_output_image, compress_status],
+        outputs=[
+            compress_output_image,
+            compress_status,
+            compress_download,
+        ],  # Added compress_download
     )
 
     extract_button.click(
         fn=extract_interface,
         inputs=[extract_input_image, extract_alpha, extract_wavelet, extract_subband],
-        outputs=[extract_output_image, extract_status, extract_decoded_text],
+        outputs=[
+            extract_output_image,
+            extract_status,
+            extract_decoded_text,
+            extract_download,
+        ],  # Added extract_download
     )
 
 # --- Launch the Gradio App ---
