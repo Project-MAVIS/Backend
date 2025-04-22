@@ -25,7 +25,7 @@ test:  ## Run tests
 	$(PYTHON) manage.py test
 
 start:  ## Start the development server
-	$(POETRY) run python manage.py runserver
+	$(POETRY) run python manage.py runserver -l 5
 
 clean:  ## Remove Python file artifacts and cache directories
 	find . -type d -name "__pycache__" -exec rm -rf {} +

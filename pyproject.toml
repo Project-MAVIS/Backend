@@ -27,6 +27,9 @@ dependencies = [
     "asn1crypto (>=1.5.1,<2.0.0)",
     "streamlit (>=1.43.2,<2.0.0)",
     "reedsolo (>=1.7.0,<2.0.0)",
+    "boto3 (>=1.37.37,<2.0.0)",
+    "gradio (>=5.25.2,<6.0.0)",
+    "qreader (>=3.16,<4.0)",
 ]
 
 [tool.poetry]

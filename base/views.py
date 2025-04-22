@@ -46,9 +46,11 @@ from .models import DeviceKeys, Image
 from .serializers import UserSerializer, ImageSerializer
 from .utils import *
 from .watermark import WaveletDCTWatermark
+from .watermark_v2 import WaveletDCTWatermark as WaveletDCTWatermark_v2
 from .certificate import *
 from .metadata import *
 from . import models
+from .resize_qr import generate_qr_code
 from backend.logging_utils import logger
 
 
@@ -797,7 +799,7 @@ class GenerateQRView(generics.CreateAPIView):
             )
 
 
-class WatermarkImageView(generics.CreateAPIView):
+class WatermarkImageWithQRView(generics.CreateAPIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request: Request):
@@ -825,6 +827,63 @@ class WatermarkImageView(generics.CreateAPIView):
             watermarked_array = watermarker.fwatermark_image(
                 PILImage.open(original_image), PILImage.open(qr_code)
             )
+
+            watermarked_image = PILImage.fromarray(watermarked_array)
+
+            if output_format is None:
+                output_format = "JPEG"
+
+            # Save to bytes buffer
+            buffer = io.BytesIO()
+            watermarked_image.save(buffer, format=output_format.upper())
+            buffer.seek(0)
+
+            # Create response
+            response = HttpResponse(
+                buffer.getvalue(), content_type=f"image/{output_format.lower()}"
+            )
+            response["Content-Disposition"] = (
+                f'inline; filename="watermarked_image.{output_format.lower()}"'
+            )
+
+            return response
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error in watermarking process: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class WatermarkImageView(generics.CreateAPIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request: Request):
+        """
+        Embed QR code watermark into original image
+        """
+        data = request.data.get("data")
+        # Check if both files are in request
+        if "original_image" not in request.FILES or not data:
+            return Response(
+                {"error": "Original image and data are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Get files from request
+            original_image = PILImage.open(request.FILES["original_image"])
+
+            # Get format from query params, default to None
+            output_format = request.data.get("format")
+
+            qr_code = generate_qr_code(data=data, original_image=original_image)
+            qr_code.save("./media/result/qr_code.jpg")
+    
+            watermarker = WaveletDCTWatermark_v2()
+
+            # Process watermarking
+            watermarked_array = watermarker.watermark_image(original_image, qr_code)
 
             watermarked_image = PILImage.fromarray(watermarked_array)
 

@@ -22,7 +22,10 @@ urlpatterns = [
     path('calculate-hash/', views.CalculateImageHashView.as_view(), name='calculate-hash'),
     path('sign-hash/', views.SignHashView.as_view(), name='sign-hash'),
     path('generate-qr/', views.GenerateQRView.as_view(), name='generate-qr'),
+
     path('watermark-image/', views.WatermarkImageView.as_view(), name='watermark-image'),
+    path('watermark-qr-image/', views.WatermarkImageWithQRView.as_view(), name='watermark-qr-image'),
+
     path('recover-watermark/', views.WatermarkRecoveryView.as_view(), name='recover-watermark'),
     path('truncate', views.truncate, name="truncate"),
     path('extract-exif/', views.ImageExifView.as_view(), name='extract-exif'),
