@@ -6,7 +6,7 @@ image id <- constant size 64 bits
 
 user id <- constant size 32 bits
 user name size <- constant size 32 bits
-user name <- Assumed to be 20 characters ASCII
+user name <- Assumed to be (max) 20 characters ASCII
 
 device_key id <- constant size 32 bits
 device name size <- constant size 32 bits
