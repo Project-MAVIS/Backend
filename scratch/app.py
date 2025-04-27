@@ -41,7 +41,7 @@ if DEFAULT_WAVELET not in common_wavelets:
 available_subbands = ["HL", "LH", "HH"]
 
 
-def save_to_temp_jpeg(image_pil, base_name="output"):
+def save_to_temp_jpeg(image_pil: Image.Image, base_name="output"):
     """Saves a PIL image to a temporary JPEG file and returns the path."""
     if image_pil is None:
         return None

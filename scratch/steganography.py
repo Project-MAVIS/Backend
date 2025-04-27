@@ -6,6 +6,7 @@ from PIL import Image
 import pywt
 from scipy.fftpack import dct, idct
 import pyqrcode
+from typing import Union, Tuple
 import math
 import struct  # For packing dimensions
 
@@ -307,7 +308,7 @@ def extract_qr_dct_wavelet(
     alpha: float,  # Less critical for sign-based extraction, but kept for signature
     wavelet_type: str,
     embed_subband: str,
-) -> (Image.Image | None, str):
+) -> Tuple[Image.Image, None, str]:
     if stego_image is None:
         return None, "Error: No stego image provided."
     try:

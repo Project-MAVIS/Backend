@@ -30,6 +30,7 @@ dependencies = [
     "boto3 (>=1.37.37,<2.0.0)",
     "gradio (>=5.25.2,<6.0.0)",
     "qreader (>=3.16,<4.0)",
+    "scikit-image (>=0.25.2,<0.26.0)",
 ]
 
 [tool.poetry]

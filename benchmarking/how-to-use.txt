@@ -1,0 +1,21 @@
+Load your original and watermarked images (supports any method).
+
+Compute image quality metrics:
+
+    - PSNR (Peak Signal-to-Noise Ratio)
+
+    - SSIM (Structural Similarity Index)
+
+Convert your original and extracted watermark strings into bit-streams.
+
+Calculate:
+
+    -BER (Bit Error Rate) between bit-streams
+
+    - Extraction Accuracy = 1 − BER
+
+You can run it from the command line like this:
+
+'''
+
+'''
